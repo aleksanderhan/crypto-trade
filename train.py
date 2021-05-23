@@ -1,10 +1,10 @@
 import gym
 import requests
 import pandas as pd
+from time import sleep
 
-from stable_baselines.common.policies import MlpPolicy
-from stable_baselines.common import make_vec_env
-from stable_baselines import PPO2
+from stable_baselines3.common.env_util import make_vec_env
+from stable_baselines3 import PPO
 
 from env import CryptoTradingEnv
 
@@ -24,15 +24,15 @@ def get_coins():
 
 frame_size = 5
 initial_balance = 5000
-max_steps = 10
+max_steps = 200
 
 
 # multiprocess environment
 env = CryptoTradingEnv(frame_size, initial_balance, get_data(), get_coins(), max_steps)
-env = make_vec_env(lambda: env, n_envs=4)
+env = make_vec_env(lambda: env, n_envs=1)
+print(env)
 
-
-model = PPO2(MlpPolicy, env, verbose=1)
+model = PPO('MlpPolicy', env, verbose=1)
 model.learn(total_timesteps=max_steps)
 model.save("model0")
 
@@ -41,12 +41,12 @@ model.save("model0")
 
 
 
-for episode in range(1):
-    obs = env.reset()
-    while True:
-        #env.render()
-        action, _states = model.predict(obs)
-        obs, reward, done, info = env.step(action)
-        if done:
-            print("Episode finished after {} timesteps".format(1))
-            break
+obs = env.reset()
+while True:
+    action, _states = model.predict(obs)
+    obs, reward, done, info = env.step(action)
+    #env.render()
+    if done.all():
+        print("Episode finished after {} timesteps".format(info[0]['current_step']))
+        env.render()
+        obs = env.reset()

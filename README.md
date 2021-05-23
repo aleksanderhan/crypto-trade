@@ -17,4 +17,4 @@
 
 
 
-| time | btc_open | btc_close | ... | btc_volume | btc_holding | eth_open | ... | eth_volume | eth_holding | <coin>_keywords 
+| time | btc_open | btc_close | ... | btc_volume | btc_amount | eth_open | ... | eth_volume | eth_amount | <coin>_keywords 

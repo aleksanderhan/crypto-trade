@@ -7,9 +7,6 @@ import json
 import random
 from collections import deque
 
-import os
-os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3' 
-
 
 class CryptoTradingEnv(gym.Env):
     """A crypto trading environment for OpenAI gym"""
@@ -37,12 +34,11 @@ class CryptoTradingEnv(gym.Env):
 
         delay_modifier = (self.current_step / self.max_steps)
 
+        obs = self._next_observation()
         reward = self.net_worth[-1] * delay_modifier
         done = self.net_worth[-1] <= 0 or self.current_step >= self.max_steps
-        obs = self._next_observation()
-        print(obs.shape)
 
-        return obs, reward, done, {}
+        return obs, reward, done, {'current_step': self.current_step}
 
 
     def reset(self):
@@ -63,8 +59,8 @@ class CryptoTradingEnv(gym.Env):
         self.max_net_worth = self.initial_balance
 
         obs = self._next_observation()
-        #print(obs)
         return obs
+
 
     def _take_action(self, action):
         action_type = int(action[0])
