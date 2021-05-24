@@ -30,9 +30,9 @@ def get_coins():
 fname = "model0"
 frame_size = 5
 initial_balance = random.randint(1000, 20000)
-start_time = '2021-05-20T00:00'
+start_time = '2021-05-01T00:00'
 end_time = '2021-05-24T00:00'
-max_steps = 300
+max_steps = 2100
 epochs = 2
 
 # multiprocess environment
@@ -41,10 +41,9 @@ env = make_vec_env(lambda: env, n_envs=1)
 print(env)
 
 
+model = PPO('MlpPolicy', env, verbose=1)
 if os.path.isfile(fname + '.zip'):
-    model = PPO.load(fname)
-else:
-    model = PPO('MlpPolicy', env, verbose=1)
+    model.load(fname)    
 
 
 

@@ -39,7 +39,7 @@ class CryptoTradingEnv(gym.Env):
             low=0, 
             high=np.inf, 
             shape=(
-                len(coins) * 5 + 4, #+ 2 + 1, # (num_coins + portefolio value) * num_features + balance & net worth + 1?
+                len(coins) * 6+ 2, # + 1, # (num_coins + portefolio value) * num_features + balance & net worth + 1?
                 frame_size
                 ), 
             dtype=np.float32
@@ -145,7 +145,7 @@ class CryptoTradingEnv(gym.Env):
     def _next_observation(self):
         frame = []
         for coin in self.coins:
-            print(self.df.loc[self.current_step - self.frame_size +1: self.current_step, coin + '_open'].values)
+            #print(self.df.loc[self.current_step - self.frame_size +1: self.current_step, coin + '_open'].values)
             frame.append(self.df.loc[self.current_step - self.frame_size +1: self.current_step, coin + '_open'].values)
             frame.append(self.df.loc[self.current_step - self.frame_size +1: self.current_step, coin + '_high'].values)
             frame.append(self.df.loc[self.current_step - self.frame_size +1: self.current_step, coin + '_low'].values)
@@ -157,7 +157,6 @@ class CryptoTradingEnv(gym.Env):
         frame.append(np.array(self.net_worth))
 
         obs = np.array(frame)
-        print(obs)
         return obs
 
 
