@@ -25,9 +25,9 @@ class CryptoTradingEnv(gym.Env):
         self.visualization = None
         self.current_step = frame_size
         self.portfolio = {}
-        self.max_net_worth = self.initial_balance
-        self.balance = deque(maxlen=self.frame_size)
-        self.net_worth = deque(maxlen=self.frame_size)
+        self.max_net_worth = initial_balance
+        self.balance = deque(maxlen=frame_size)
+        self.net_worth = deque(maxlen=frame_size)
         self.training = True
         self.trades = []
 
@@ -79,12 +79,12 @@ class CryptoTradingEnv(gym.Env):
     def render(self, mode='console', title=None, **kwargs):
         # Render the environment to the screen
         profit = self.net_worth[-1] - self.initial_balance
-
         if mode == 'console':
             print(f'Step: {self.current_step}')
             print(f'Balance: {self.balance[-1]}')
             print(f'Net worth: {self.net_worth[-1]} (Max net worth: {self.max_net_worth})')
             print(f'Profit: {profit}')
+            #print(f'Portfolio: {self.portfolio}')
         '''
         elif mode == 'human':
             if self.visualization == None:
