@@ -32,8 +32,8 @@ frame_size = 5
 initial_balance = random.randint(1000, 20000)
 start_time = '2021-05-20T00:00'
 end_time = '2021-05-24T00:00'
-max_steps = 100
-epochs = 10
+max_steps = 300
+epochs = 2
 
 # multiprocess environment
 env = CryptoTradingEnv(frame_size, initial_balance, get_data(frame_size, start_time, end_time), get_coins(), max_steps)

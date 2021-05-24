@@ -19,7 +19,7 @@ def get_data(frame_size, start_time, end_time):
 
 
 frame_size = 10
-start_time = '2021-05-20T00:00'
+start_time = '2021-05-22T00:00'
 end_time = '2021-05-24T00:00'
 
 

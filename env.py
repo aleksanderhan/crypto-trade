@@ -33,11 +33,15 @@ class CryptoTradingEnv(gym.Env):
         self.action_space = spaces.Box(low=np.array([0, 0, 0]), high=np.array([3, 1, len(coins)-1]), dtype=np.float16)
 
         # prices over the last few days and portfolio status
-        self.observation_space = spaces.Box(low=0, high=np.inf, 
+        self.observation_space = spaces.Box(
+            low=0, 
+            high=np.inf, 
             shape=(
                 len(coins) * 5 + 4, #+ 2 + 1, # (num_coins + portefolio value) * num_features + balance & net worth + 1?
-                frame_size), 
-                dtype=np.float32)
+                frame_size
+                ), 
+            dtype=np.float32
+        )
 
 
     def step(self, action):
@@ -137,6 +141,7 @@ class CryptoTradingEnv(gym.Env):
     def _next_observation(self):
         frame = []
         for coin in self.coins:
+            print(self.df.loc[self.current_step - self.frame_size +1: self.current_step, coin + '_open'].values)
             frame.append(self.df.loc[self.current_step - self.frame_size +1: self.current_step, coin + '_open'].values)
             frame.append(self.df.loc[self.current_step - self.frame_size +1: self.current_step, coin + '_high'].values)
             frame.append(self.df.loc[self.current_step - self.frame_size +1: self.current_step, coin + '_low'].values)
@@ -147,7 +152,9 @@ class CryptoTradingEnv(gym.Env):
         frame.append(np.array(self.balance))
         frame.append(np.array(self.net_worth))
 
-        return np.array(frame)
+        obs = np.array(frame)
+        print(obs)
+        return obs
 
 
     def _calculate_net_worth(self):
