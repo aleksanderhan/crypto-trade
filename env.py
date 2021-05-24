@@ -10,21 +10,34 @@ from collections import deque
 
 class CryptoTradingEnv(gym.Env):
     """A crypto trading environment for OpenAI gym"""
-    metadata = {'render.modes': ['console']}
+    metadata = {'render.modes': ['console', 'human']}
 
-    def __init__(self, frame_size, initial_balance, df, coins, max_steps):
+    def __init__(self, frame_size, initial_balance, df, coins, max_steps, fee=0.005):
         super(CryptoTradingEnv, self).__init__()
         self.frame_size = frame_size
         self.initial_balance = initial_balance
         self.df = df
         self.coins = coins
         self.max_steps = max_steps
+        self.fee = fee
+        self.visualization = None
+        self.current_step = frame_size
+        self.portfolio = {}
+        self.max_net_worth = self.initial_balance
+        self.balance = deque(maxlen=self.frame_size)
+        self.net_worth = deque(maxlen=self.frame_size)
+        self.training = True
+        self.trades = []
 
         # Buy/sell/hold for each coin
         self.action_space = spaces.Box(low=np.array([0, 0, 0]), high=np.array([3, 1, len(coins)-1]), dtype=np.float16)
 
         # prices over the last few days and portfolio status
-        self.observation_space = spaces.Box(low=0, high=np.inf, shape=(14, 5), dtype=np.float16)
+        self.observation_space = spaces.Box(low=0, high=np.inf, 
+            shape=(
+                len(coins) * 5 + 4, #+ 2 + 1, # (num_coins + portefolio value) * num_features + balance & net worth + 1?
+                frame_size), 
+                dtype=np.float32)
 
 
     def step(self, action):
@@ -41,25 +54,38 @@ class CryptoTradingEnv(gym.Env):
         return obs, reward, done, {'current_step': self.current_step}
 
 
-    def reset(self):
-        self.current_step = self.frame_size
+    def reset(self, training=True):
+        # Set the current step to a random point within the data frame
+        self.current_step = random.randint(0, self.max_steps - self.frame_size) # + 1? 
 
-        self.portfolio = {}
         for coin in self.coins:
             self.portfolio[coin] = deque(maxlen=self.frame_size)
             for _ in range(self.frame_size):
                 self.portfolio[coin].append(0)
 
-
-        self.balance = deque(maxlen=self.frame_size)
-        self.net_worth = deque(maxlen=self.frame_size)
         for _ in range(self.frame_size):
             self.balance.append(self.initial_balance)
             self.net_worth.append(self.initial_balance)
-        self.max_net_worth = self.initial_balance
 
-        obs = self._next_observation()
-        return obs
+        return self._next_observation()
+
+
+    def render(self, mode='console', title=None, **kwargs):
+        # Render the environment to the screen
+        profit = self.net_worth[-1] - self.initial_balance
+
+        if mode == 'console':
+            print(f'Step: {self.current_step}')
+            print(f'Balance: {self.balance[-1]}')
+            print(f'Net worth: {self.net_worth[-1]} (Max net worth: {self.max_net_worth})')
+            print(f'Profit: {profit}')
+        elif mode == 'human':
+            if self.visualization == None:
+              self.visualization = StockTradingGraph(self.df, title)
+            
+            if self.current_step > LOOKBACK_WINDOW_SIZE:        
+              self.visualization.render(self.current_step, self.net_worth, 
+                self.trades, window_size=LOOKBACK_WINDOW_SIZE)
 
 
     def _take_action(self, action):
@@ -68,20 +94,39 @@ class CryptoTradingEnv(gym.Env):
         coin = self.coins[int(action[2])]
 
         # Set the current price to a random price within the time step
-        current_price = random.uniform(self.df.loc[self.current_step, coin + "_open"], self.df.loc[self.current_step, coin + "_close"])
+        current_price = random.uniform(self.df.loc[self.current_step, coin + '_open'], self.df.loc[self.current_step, coin + '_close'])
 
         if action_type == 0:
             # Buy amount % of balance in shares
             total_possible = self.balance[-1] / current_price
-            coins_bought = total_possible * amount
-            self.balance.append(self.balance[-1] - coins_bought * current_price)
+            coins_bought = total_possible * (1 - self.fee) * amount
+            cost = coins_bought * current_price
+            self.balance.append(self.balance[-1] - cost)
             self.portfolio[coin].append(self.portfolio[coin][-1] + coins_bought)
+
+            if coins_bought > 0:
+              self.trades.append({
+                'step': self.current_step,
+                'coin': coin,
+                'coins_bought': coins_bought, 
+                'total': cost,
+                'type': 'buy'
+                })
 
         elif action_type == 1:
             # Sell amount % of shares held
             coins_sold = self.portfolio[coin][-1] * amount
-            self.balance.append(self.balance[-1] + coins_sold * current_price)
+            self.balance.append(self.balance[-1] + coins_sold * (1 - self.fee) * current_price)
             self.portfolio[coin].append(self.portfolio[coin][-1] - coins_sold)
+
+            if coins_sold > 0:
+              self.trades.append({
+                'step': self.current_step,
+                'coin': coin,
+                'coins_sold': coins_sold, 
+                'total': coins_sold * current_price,
+                'type': 'sell'
+                })
 
 
         self.net_worth.append(self._calculate_net_worth())
@@ -114,12 +159,4 @@ class CryptoTradingEnv(gym.Env):
         return self.balance[-1] + portfolio_value
 
 
-    def render(self, mode='console', close=False):
-        # Render the environment to the screen
-        profit = self.net_worth[-1] - self.initial_balance
-
-        print(f'Step: {self.current_step}')
-        print(f'Balance: {self.balance[-1]}')
-        print(f'Net worth: {self.net_worth[-1]} (Max net worth: {self.max_net_worth})')
-        print(f'Profit: {profit}')
-
+    
