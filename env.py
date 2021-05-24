@@ -7,6 +7,8 @@ import json
 import random
 from collections import deque
 
+#from visualize import StockTradingGraph
+
 
 class CryptoTradingEnv(gym.Env):
     """A crypto trading environment for OpenAI gym"""
@@ -83,6 +85,7 @@ class CryptoTradingEnv(gym.Env):
             print(f'Balance: {self.balance[-1]}')
             print(f'Net worth: {self.net_worth[-1]} (Max net worth: {self.max_net_worth})')
             print(f'Profit: {profit}')
+        '''
         elif mode == 'human':
             if self.visualization == None:
               self.visualization = StockTradingGraph(self.df, title)
@@ -90,6 +93,7 @@ class CryptoTradingEnv(gym.Env):
             if self.current_step > LOOKBACK_WINDOW_SIZE:        
               self.visualization.render(self.current_step, self.net_worth, 
                 self.trades, window_size=LOOKBACK_WINDOW_SIZE)
+        '''
 
 
     def _take_action(self, action):
@@ -165,5 +169,3 @@ class CryptoTradingEnv(gym.Env):
 
         return self.balance[-1] + portfolio_value
 
-
-    

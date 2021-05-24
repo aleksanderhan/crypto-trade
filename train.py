@@ -53,7 +53,7 @@ for e in range(epochs):
     model.save(fname)
 
     mean_reward, std_reward = evaluate_policy(model, env, n_eval_episodes=4, deterministic=True)
-    env.reset()
+    #env.reset()
     print('mean_reward', mean_reward)
     print('std_reward', std_reward)
 
