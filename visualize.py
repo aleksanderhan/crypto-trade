@@ -6,7 +6,7 @@ from matplotlib import style
 
 # finance module is no longer part of matplotlib
 # see: https://github.com/matplotlib/mpl_finance
-#from mplfinance import candlestick_ohlc as candlestick
+from mplfinance.original_flavor import candlestick_ohlc as candlestick
 
 style.use('dark_background')
 
@@ -28,7 +28,7 @@ class StockTradingGraph:
 
     def __init__(self, df, title=None):
         self.df = df
-        self.net_worths = np.zeros(len(df['Date']))
+        self.net_worths = np.zeros(len(df.index))
 
         # Create a figure on screen and set the title
         fig = plt.figure()

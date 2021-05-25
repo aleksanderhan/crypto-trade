@@ -7,7 +7,7 @@ import json
 import random
 from collections import deque
 
-#from visualize import StockTradingGraph
+from visualize import StockTradingGraph
 
 
 class CryptoTradingEnv(gym.Env):
@@ -41,7 +41,7 @@ class CryptoTradingEnv(gym.Env):
             shape=(
                 len(coins) * 6+ 2, # + 1, # (num_coins + portefolio value) * num_features + balance & net worth + 1?
                 frame_size
-                ), 
+            ), 
             dtype=np.float32
         )
 
@@ -62,7 +62,7 @@ class CryptoTradingEnv(gym.Env):
 
     def reset(self, training=True):
         # Set the current step to a random point within the data frame
-        self.current_step = random.randint(self.frame_size, self.max_steps - self.frame_size) # + 1? 
+        self.current_step = self.frame_size #random.randint(self.frame_size, self.max_steps - self.frame_size)
 
         for coin in self.coins:
             self.portfolio[coin] = deque(maxlen=self.frame_size)
@@ -85,7 +85,6 @@ class CryptoTradingEnv(gym.Env):
             print(f'Net worth: {self.net_worth[-1]} (Max net worth: {self.max_net_worth})')
             print(f'Profit: {profit}')
             #print(f'Portfolio: {self.portfolio}')
-        '''
         elif mode == 'human':
             if self.visualization == None:
               self.visualization = StockTradingGraph(self.df, title)
@@ -93,7 +92,7 @@ class CryptoTradingEnv(gym.Env):
             if self.current_step > LOOKBACK_WINDOW_SIZE:        
               self.visualization.render(self.current_step, self.net_worth, 
                 self.trades, window_size=LOOKBACK_WINDOW_SIZE)
-        '''
+        
 
 
     def _take_action(self, action):
