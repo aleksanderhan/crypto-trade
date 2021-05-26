@@ -29,34 +29,47 @@ def get_coins():
 start_time = '2020-10-01T00:00'
 end_time = '2021-05-01T00:00'
 frame_size = 50
-epochs = 100
+epochs = 10
 fname = f'model1-fs{frame_size}'
-episodes = 100
+episodes = 10000
+max_initial_balance = 20000
+
 
 
 if __name__ == '__main__':
     coins = get_coins()
-    data = get_data(start_time, end_time)
-    max_steps = len(data.index) - frame_size
+    df = get_data(start_time, end_time)
+
+    slice_point = int(len(df.index) * 1.0)
+    train_df = df[:slice_point]
+    test_df = df[slice_point:]
+    
+
+    train_env = make_vec_env(
+        lambda: CryptoTradingEnv(frame_size, max_initial_balance, train_df, coins), 
+        n_envs=1, 
+        vec_env_cls=DummyVecEnv
+    )
+
+    '''
+    validation_env = make_vec_env(
+        lambda: CryptoTradingEnv(frame_size, max_initial_balance, test_df, coins), 
+        n_envs=1, 
+        vec_env_cls=DummyVecEnv
+    )
+    '''
+
+    model = PPO('MlpPolicy', train_env, verbose=0, n_epochs=epochs)
+    if os.path.isfile(fname + '.zip'):
+        model.load(fname)    
 
 
-    for e in range(episodes):  
-        initial_balance = random.randint(1000, 20000)
-        env = CryptoTradingEnv(frame_size, initial_balance, data, coins, max_steps)
-        env = make_vec_env(lambda: env, n_envs=1, vec_env_cls=DummyVecEnv)
-
-
-        model = PPO('MlpPolicy', env, verbose=1, n_epochs=epochs)
-        if os.path.isfile(fname + '.zip'):
-            print("load")
-            model.load(fname)    
-
-
+    for e in range(episodes):
         t0 = perf_counter()
-        model.learn(total_timesteps=max_steps)
+        model.learn(total_timesteps=int(len(train_df.index)))
         t1 = perf_counter()
         
         model.save(fname)
 
-        print(e, 'training time', t1 - t0)
-        
+        mean_reward, std_reward = evaluate_policy(model, train_env, n_eval_episodes=5, deterministic=True)
+        print(e, 'training time:', t1 - t0, 'mean_reward:', mean_reward)

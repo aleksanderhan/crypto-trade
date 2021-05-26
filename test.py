@@ -47,7 +47,6 @@ if __name__ == '__main__':
 
     model = PPO('MlpPolicy', env, verbose=0, n_epochs=epochs)
     if os.path.isfile(fname + '.zip'):
-        print("load")
         model.load(fname) 
 
 

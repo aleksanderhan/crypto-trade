@@ -65,7 +65,7 @@ class StockTradingGraph:
         legend = self.net_worth_ax.legend(loc=2, ncol=2, prop={'size': 8})
         legend.get_frame().set_alpha(0.4)
 
-        last_date = date2num(self.df['Date'].values[current_step])
+        last_date = self.df['timestamp'].values[current_step]
         last_net_worth = self.net_worths[current_step]
 
         # Annotate the current net worth on the net worth graph
@@ -92,7 +92,7 @@ class StockTradingGraph:
         candlestick(self.price_ax, candlesticks, width=1,
                     colorup=UP_COLOR, colordown=DOWN_COLOR)
 
-        last_date = date2num(self.df['Date'].values[current_step])
+        last_date = self.df['timestamp'].values[current_step]
         last_close = self.df['Close'].values[current_step]
         last_high = self.df['High'].values[current_step]
 
@@ -132,7 +132,7 @@ class StockTradingGraph:
     def _render_trades(self, current_step, trades, step_range):
         for trade in trades:
             if trade['step'] in step_range:
-                date = date2num(self.df['Date'].values[trade['step']])
+                date = self.df['timestamp'].values[trade['step']]
                 high = self.df['High'].values[trade['step']]
                 low = self.df['Low'].values[trade['step']]
 
@@ -159,8 +159,7 @@ class StockTradingGraph:
         step_range = range(window_start, current_step + 1)
 
         # Format dates as timestamps, necessary for candlestick graph
-        dates = np.array([date2num(x)
-                          for x in self.df['Date'].values[step_range]])
+        dates = np.array(self.df['timestamp'].values[step_range])
 
         self._render_net_worth(current_step, net_worth, step_range, dates)
         self._render_price(current_step, net_worth, dates, step_range)
@@ -168,7 +167,7 @@ class StockTradingGraph:
         self._render_trades(current_step, trades, step_range)
 
         # Format the date ticks to be more easily read
-        self.price_ax.set_xticklabels(self.df['Date'].values[step_range], rotation=45,
+        self.price_ax.set_xticklabels(self.df['timestamp'].values[step_range], rotation=45,
                                       horizontalalignment='right')
 
         # Hide duplicate net worth date labels

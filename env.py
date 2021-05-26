@@ -16,18 +16,19 @@ class CryptoTradingEnv(gym.Env):
     """A crypto trading environment for OpenAI gym"""
     metadata = {'render.modes': ['console', 'human']}
 
-    def __init__(self, frame_size, initial_balance, df, coins, max_steps, fee=0.005):
+    def __init__(self, frame_size, max_initial_balance, df, coins, fee=0.005):
         super(CryptoTradingEnv, self).__init__()
         self.frame_size = frame_size
-        self.initial_balance = initial_balance
+        self.max_initial_balance = max_initial_balance
+        self.initial_balance = random.randint(1000, max_initial_balance)
         self.df = df
         self.coins = coins
-        self.max_steps = max_steps
+        self.max_steps = len(df.index) - frame_size
         self.fee = fee
         self.visualization = None
         self.current_step = frame_size
         self.portfolio = {}
-        self.max_net_worth = initial_balance
+        self.max_net_worth = self.initial_balance
         self.balance = deque(maxlen=frame_size)
         self.net_worth = deque(maxlen=frame_size)
         self.training = True
@@ -65,6 +66,7 @@ class CryptoTradingEnv(gym.Env):
     def reset(self, training=True):
         # Set the current step to a random point within the data frame
         self.current_step = random.randint(self.frame_size, self.max_steps - self.frame_size) # self.frame_sizee
+        self.initial_balance = random.randint(1000, self.max_initial_balance)
 
         for coin in self.coins:
             self.portfolio[coin] = deque(maxlen=self.frame_size)
