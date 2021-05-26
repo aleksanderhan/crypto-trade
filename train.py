@@ -27,10 +27,10 @@ def get_coins():
 
 
 
-start_time = '2021-05-10T00:00'
-end_time = '2021-05-20T00:00'
+start_time = '2017-10-01T00:00'
+end_time = '2021-05-01T00:00'
 frame_size = 50
-epochs = 10
+epochs = 20
 fname = f'model1-fs{frame_size}'
 episodes = 10000
 max_initial_balance = 20000
