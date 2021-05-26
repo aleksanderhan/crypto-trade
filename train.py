@@ -26,42 +26,37 @@ def get_coins():
     return r.json()
 
 
-start_time = '2021-05-16T00:00'
-end_time = '2021-05-20T00:00'
+start_time = '2020-10-01T00:00'
+end_time = '2021-05-01T00:00'
 frame_size = 50
-epochs = 10
+epochs = 100
 fname = f'model1-fs{frame_size}'
-data = get_data(start_time, end_time)
-max_steps = len(data.index) - frame_size
-initial_balance = random.randint(1000, 20000)
+episodes = 100
 
 
 if __name__ == '__main__':
-    # multiprocess environment
-    env = CryptoTradingEnv(frame_size, initial_balance, data, get_coins(), max_steps)
-    env = make_vec_env(lambda: env, n_envs=1, vec_env_cls=DummyVecEnv)
+    coins = get_coins()
+    data = get_data(start_time, end_time)
+    max_steps = len(data.index) - frame_size
 
 
-    model = PPO('MlpPolicy', env, verbose=1, n_epochs=epochs)
-    if os.path.isfile(fname + '.zip'):
-        print("load")
-        model.load(fname)    
+    for e in range(episodes):  
+        initial_balance = random.randint(1000, 20000)
+        env = CryptoTradingEnv(frame_size, initial_balance, data, coins, max_steps)
+        env = make_vec_env(lambda: env, n_envs=1, vec_env_cls=DummyVecEnv)
 
 
-    t0 = perf_counter()
-    model.learn(total_timesteps=max_steps)
-    t1 = perf_counter()
-    
-    model.save(fname)
+        model = PPO('MlpPolicy', env, verbose=1, n_epochs=epochs)
+        if os.path.isfile(fname + '.zip'):
+            print("load")
+            model.load(fname)    
 
 
-    obs = env.reset()
-    while True:
-        action, _states = model.predict(obs)
-        obs, reward, done, info = env.step(action)
-        env.render(mode='console')
-        if done.all():
-            #env.render(mode='console')
-            print('Episode finished after {} timesteps'.format(info[0]['current_step']))
-            break;
+        t0 = perf_counter()
+        model.learn(total_timesteps=max_steps)
+        t1 = perf_counter()
+        
+        model.save(fname)
+
+        print(e, 'training time', t1 - t0)
         

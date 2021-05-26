@@ -9,6 +9,8 @@ from collections import deque
 
 from visualize import StockTradingGraph
 
+LOOKBACK_WINDOW_SIZE = 50
+
 
 class CryptoTradingEnv(gym.Env):
     """A crypto trading environment for OpenAI gym"""
@@ -39,7 +41,7 @@ class CryptoTradingEnv(gym.Env):
             low=0, 
             high=np.inf, 
             shape=(
-                len(coins) * 6+ 2, # + 1, # (num_coins + portefolio value) * num_features + balance & net worth + 1?
+                len(coins) * 6 + 3, # num_coins * (portefolio value & candles) + (balance & net worth & timestamp)
                 frame_size
             ), 
             dtype=np.float32
@@ -55,14 +57,14 @@ class CryptoTradingEnv(gym.Env):
 
         obs = self._next_observation()
         reward = self.net_worth[-1] * delay_modifier
-        done = self.net_worth[-1] <= 0 or self.current_step >= self.max_steps
+        done = self.net_worth[-1] <= 0 or self.current_step > self.max_steps
 
         return obs, reward, done, {'current_step': self.current_step}
 
 
     def reset(self, training=True):
         # Set the current step to a random point within the data frame
-        self.current_step = self.frame_size #random.randint(self.frame_size, self.max_steps - self.frame_size)
+        self.current_step = random.randint(self.frame_size, self.max_steps - self.frame_size) # self.frame_sizee
 
         for coin in self.coins:
             self.portfolio[coin] = deque(maxlen=self.frame_size)
@@ -90,8 +92,7 @@ class CryptoTradingEnv(gym.Env):
               self.visualization = StockTradingGraph(self.df, title)
             
             if self.current_step > LOOKBACK_WINDOW_SIZE:        
-              self.visualization.render(self.current_step, self.net_worth, 
-                self.trades, window_size=LOOKBACK_WINDOW_SIZE)
+              self.visualization.render(self.current_step, self.net_worth[-1], self.trades, window_size=LOOKBACK_WINDOW_SIZE)
         
 
 
@@ -152,11 +153,11 @@ class CryptoTradingEnv(gym.Env):
             frame.append(self.df.loc[self.current_step - self.frame_size +1: self.current_step, coin + '_volume'].values)
             frame.append(np.array(self.portfolio[coin]))
 
+        frame.append(self.df.loc[self.current_step - self.frame_size +1: self.current_step, 'timestamp'].values)
         frame.append(np.array(self.balance))
         frame.append(np.array(self.net_worth))
 
-        obs = np.array(frame)
-        return obs
+        return np.array(frame)
 
 
     def _calculate_net_worth(self):

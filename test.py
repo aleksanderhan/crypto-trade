@@ -28,10 +28,10 @@ def get_coins():
 
 
 
-fname = 'model1-fs3'
+fname = 'model1-fs50'
 start_time = '2021-05-01T00:00'
 end_time = '2021-05-20T00:00'
-frame_size = 3
+frame_size = 50
 epochs = 10
 initial_balance = 10000
 
@@ -53,23 +53,22 @@ if __name__ == '__main__':
 
     obs = env.reset()
     print(obs)
-    '''
+
     while True:
-        env.render(mode='console')
         action, _states = model.predict(obs)
         obs, reward, done, info = env.step(action)
+        env.render(mode='console')
         if done.all():
+            #env.render(mode='console')
             print('Episode finished after {} timesteps'.format(info[0]['current_step']))
             break;
-            #obs = env.reset()
-    '''
 
 
-mean_reward_random, std_reward_random = evaluate_policy(PPO('MlpPolicy', env, verbose=0), env, n_eval_episodes=10, deterministic=True)
-mean_reward, std_reward = evaluate_policy(model, env, n_eval_episodes=10, deterministic=True)
-print('              trained         random')
-print('mean_reward', mean_reward, mean_reward_random)
-print('std_reward', std_reward, std_reward_random)
-print()
-print('delta_mean_reward', mean_reward - mean_reward_random)
-print('delta_std_reward', std_reward - std_reward_random)
+    mean_reward_random, std_reward_random = evaluate_policy(PPO('MlpPolicy', env, verbose=0), env, n_eval_episodes=10, deterministic=True)
+    mean_reward, std_reward = evaluate_policy(model, env, n_eval_episodes=10, deterministic=True)
+    print('              trained         random')
+    print('mean_reward', mean_reward, mean_reward_random)
+    print('std_reward', std_reward, std_reward_random)
+    print()
+    print('delta_mean_reward', mean_reward - mean_reward_random)
+    print('delta_std_reward', std_reward - std_reward_random)
