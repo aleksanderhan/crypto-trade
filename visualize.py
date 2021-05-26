@@ -85,16 +85,16 @@ class StockTradingGraph:
 
         # Format data for OHCL candlestick graph
         candlesticks = zip(dates,
-                           self.df['Open'].values[step_range], self.df['Close'].values[step_range],
-                           self.df['High'].values[step_range], self.df['Low'].values[step_range])
+                           self.df['btc_open'].values[step_range], self.df['btc_close'].values[step_range],
+                           self.df['btc_high'].values[step_range], self.df['btc_low'].values[step_range])
 
         # Plot price using candlestick graph from mpl_finance
         candlestick(self.price_ax, candlesticks, width=1,
                     colorup=UP_COLOR, colordown=DOWN_COLOR)
 
         last_date = self.df['timestamp'].values[current_step]
-        last_close = self.df['Close'].values[current_step]
-        last_high = self.df['High'].values[current_step]
+        last_close = self.df['btc_close'].values[current_step]
+        last_high = self.df['btc_high'].values[current_step]
 
         # Print the current price to the price axis
         self.price_ax.annotate('{0:.2f}'.format(last_close), (last_date, last_close),
@@ -112,12 +112,12 @@ class StockTradingGraph:
     def _render_volume(self, current_step, net_worth, dates, step_range):
         self.volume_ax.clear()
 
-        volume = np.array(self.df['Volume'].values[step_range])
+        volume = np.array(self.df['btc_volume'].values[step_range])
 
-        pos = self.df['Open'].values[step_range] - \
-            self.df['Close'].values[step_range] < 0
-        neg = self.df['Open'].values[step_range] - \
-            self.df['Close'].values[step_range] > 0
+        pos = self.df['btc_open'].values[step_range] - \
+            self.df['btc_close'].values[step_range] < 0
+        neg = self.df['btc_open'].values[step_range] - \
+            self.df['btc_close'].values[step_range] > 0
 
         # Color volume bars based on price direction on that date
         self.volume_ax.bar(dates[pos], volume[pos], color=UP_COLOR,
@@ -133,8 +133,8 @@ class StockTradingGraph:
         for trade in trades:
             if trade['step'] in step_range:
                 date = self.df['timestamp'].values[trade['step']]
-                high = self.df['High'].values[trade['step']]
-                low = self.df['Low'].values[trade['step']]
+                high = self.df['btc_high'].values[trade['step']]
+                low = self.df['btc_low'].values[trade['step']]
 
                 if trade['type'] == 'buy':
                     high_low = low

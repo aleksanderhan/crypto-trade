@@ -65,7 +65,7 @@ class CryptoTradingEnv(gym.Env):
 
     def reset(self, training=True):
         # Set the current step to a random point within the data frame
-        self.current_step = random.randint(self.frame_size, self.max_steps - self.frame_size) # self.frame_sizee
+        self.current_step = self.frame_size
         self.initial_balance = random.randint(1000, self.max_initial_balance)
 
         for coin in self.coins:

@@ -1,3 +1,2 @@
 stable-baselines3[extra]
-tensorflow==1.15.0
 flask==2.0.1
