@@ -58,7 +58,7 @@ class CryptoTradingEnv(gym.Env):
 
         obs = self._next_observation()
         reward = self.net_worth[-1] * delay_modifier
-        done = self.net_worth[-1] <= 0 or self.current_step > self.max_steps
+        done = self.net_worth[-1] <= 0 or self.current_step >= self.max_steps
 
         return obs, reward, done, {'current_step': self.current_step}
 
@@ -159,6 +159,7 @@ class CryptoTradingEnv(gym.Env):
         frame.append(np.array(self.balance))
         frame.append(np.array(self.net_worth))
 
+        #print(frame)
         return np.array(frame)
 
 
