@@ -59,6 +59,10 @@ class CryptoTradingEnv(gym.Env):
         obs = self._next_observation()
         reward = self.net_worth[-1] * delay_modifier
         done = self.net_worth[-1] <= 0 or self.current_step >= self.max_steps
+        #print('net worth', self.net_worth[-1])
+        #print('maxstep', self.max_steps)
+        #print('current_step', self.current_step)
+        #print()
 
         return obs, reward, done, {'current_step': self.current_step}
 
@@ -84,10 +88,12 @@ class CryptoTradingEnv(gym.Env):
         # Render the environment to the screen
         profit = self.net_worth[-1] - self.initial_balance
         if mode == 'console':
+            ''' 
             print(f'Step: {self.current_step}')
             print(f'Balance: {self.balance[-1]}')
             print(f'Net worth: {self.net_worth[-1]} (Max net worth: {self.max_net_worth})')
             print(f'Profit: {profit}')
+            '''
             #print(f'Portfolio: {self.portfolio}')
         elif mode == 'human':
             if self.visualization == None:
@@ -96,6 +102,7 @@ class CryptoTradingEnv(gym.Env):
             if self.current_step > LOOKBACK_WINDOW_SIZE:        
               self.visualization.render(self.current_step, self.net_worth[-1], self.trades, window_size=LOOKBACK_WINDOW_SIZE)
         
+        return profit
 
 
     def _take_action(self, action):

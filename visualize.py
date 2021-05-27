@@ -1,5 +1,7 @@
 import numpy as np
 import matplotlib
+matplotlib.use('TkAgg')
+#matplotlib.use('GTK3Agg')
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 from matplotlib import style
@@ -18,11 +20,7 @@ UP_TEXT_COLOR = '#73D3CC'
 DOWN_TEXT_COLOR = '#DC2C27'
 
 
-def date2num(date):
-    converter = mdates.strpdate2num('%Y-%m-%d')
-    return converter(date)
-
-
+print(matplotlib.get_backend())
 class StockTradingGraph:
     """A stock trading visualization using matplotlib made to render OpenAI gym environments"""
 

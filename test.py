@@ -1,6 +1,7 @@
 import requests
 import pandas as pd
 import os
+from collections import deque
 
 
 from stable_baselines3 import PPO
@@ -29,7 +30,7 @@ def get_coins():
 
 
 fname = 'model1-fs50'
-start_time = '2021-05-01T00:00'
+start_time = '2021-05-19T00:00'
 end_time = '2021-05-20T00:00'
 frame_size = 50
 epochs = 10
@@ -51,18 +52,19 @@ if __name__ == '__main__':
 
 
     obs = env.reset()
-    print(obs)
 
+    profit = deque(maxlen=2)
     while True:
         action, _states = model.predict(obs)
         obs, reward, done, info = env.step(action)
-        env.render(mode='console')
+        profit.append(env.render(mode='human'))
         if done.all():
-            #env.render(mode='console')
+            print(f'Profit: {profit[0]}')
             print('Episode finished after {} timesteps'.format(info[0]['current_step']))
-            break;
+            obs = env.reset()
+            #break;
 
-
+'''
     mean_reward_random, std_reward_random = evaluate_policy(PPO('MlpPolicy', env, verbose=0), env, n_eval_episodes=10, deterministic=True)
     mean_reward, std_reward = evaluate_policy(model, env, n_eval_episodes=10, deterministic=True)
     print('              trained         random')
@@ -71,3 +73,4 @@ if __name__ == '__main__':
     print()
     print('delta_mean_reward', mean_reward - mean_reward_random)
     print('delta_std_reward', std_reward - std_reward_random)
+    '''
