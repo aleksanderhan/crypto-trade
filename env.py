@@ -36,7 +36,7 @@ class CryptoTradingEnv(gym.Env):
         self.debug = debug
 
         # Buy/sell/hold for each coin
-        self.action_space = spaces.Box(low=np.array([0, 0, 0]), high=np.array([3, 1, len(coins)-1]), dtype=np.float16)
+        self.action_space = spaces.Box(low=np.array([-1, -1, -1]), high=np.array([1, 1, 1]), dtype=np.float16)
 
         # prices over the last few days and portfolio status
         self.observation_space = spaces.Box(
@@ -110,25 +110,44 @@ class CryptoTradingEnv(gym.Env):
 
 
     def _take_action(self, action):
-        action_type = int(action[0])
-        amount = action[1]
-        coin = self.coins[int(action[2])]
+        action_type = action[0]
+        amount = 0.5*(action[1] - 1) + 1 # https://tiagoolivoto.github.io/metan/reference/resca.html
+        
+        coin_action = ((len(self.coins) - 1) / 2) * (action[2] - 1) + len(self.coins) - 1
 
+        print()
+        print('action_type', action_type)
+        print('amount', amount)
+        print('coin_action', coin_action)
+
+        coin = self.coins[int(coin_action)]
+        print('coin', coin)
         # Set the current price to a random price within the time step
         current_price = random.uniform(self.df.loc[self.current_step, coin + '_low'], self.df.loc[self.current_step, coin + '_high'])
 
         if self.debug:
-            print('amount', amount)
-            print('current_price', current_price    )
+            print('current_price', current_price)
             print('balance', self.balance)
             print('portfolio', self.portfolio)
-        if action_type == 0:
+        if action_type  <= 1 and action_type > 1/3:
             # Buy amount % of balance in shares
             total_possible = self.balance[-1] / current_price
+            print('hmmm', total_possible * (1 - self.fee) * amount)
             coins_bought = max(0, total_possible * (1 - self.fee) * amount)
+
+            print()
+            print(total_possible)
+            print(self.fee)
+            print(1-self.fee)
+            print(amount)
+            print()
+
+
+
+
+
             cost = coins_bought * current_price
             if self.debug:
-                print('total_possible', total_possible)
                 print('total_possible', total_possible)
                 print('coins_bought', coins_bought)
             self.balance.append(self.balance[-1] - cost)
@@ -143,7 +162,7 @@ class CryptoTradingEnv(gym.Env):
                 'type': 'buy'
                 })
 
-        elif action_type == 1:
+        elif action_type >= -1 and action_type < -1/3:
             # Sell amount % of shares held
             coins_sold = max(0, self.portfolio[coin][-1] * amount)
             if self.debug:
@@ -181,7 +200,6 @@ class CryptoTradingEnv(gym.Env):
         frame.append(np.array(self.balance))
         frame.append(np.array(self.net_worth))
 
-        #print(frame)
         return np.array(frame)
 
 

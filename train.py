@@ -27,7 +27,7 @@ def get_coins():
 
 
 
-start_time = '2021-01-01T00:00'
+start_time = '2021-05-18T00:00'
 end_time = '2021-05-20T00:00'
 frame_size = 50
 epochs = 20

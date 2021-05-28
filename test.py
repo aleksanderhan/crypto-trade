@@ -8,6 +8,7 @@ from stable_baselines3 import PPO
 from stable_baselines3.common.env_util import make_vec_env
 from stable_baselines3.common.vec_env import SubprocVecEnv, DummyVecEnv
 from stable_baselines3.common.evaluation import evaluate_policy
+from stable_baselines3.common.env_checker import check_env
 
 from env import CryptoTradingEnv
 
@@ -32,7 +33,7 @@ def get_coins():
 fname = 'model1-fs50'
 start_time = '2021-05-18T00:00'
 end_time = '2021-05-20T00:00'
-frame_size = 5
+frame_size = 50
 epochs = 10
 initial_balance = 10000
 
@@ -42,7 +43,8 @@ if __name__ == '__main__':
     max_steps = len(data.index) - frame_size
 
 
-    env = CryptoTradingEnv(frame_size, initial_balance, data, get_coins(), max_steps)
+    env = CryptoTradingEnv(frame_size, initial_balance, data, get_coins(), debug=True)
+    check_env(env)
     env = make_vec_env(lambda: env, n_envs=1, vec_env_cls=DummyVecEnv)
 
 
