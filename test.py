@@ -30,9 +30,9 @@ def get_coins():
 
 
 fname = 'model1-fs50'
-start_time = '2021-05-19T00:00'
+start_time = '2021-05-18T00:00'
 end_time = '2021-05-20T00:00'
-frame_size = 50
+frame_size = 5
 epochs = 10
 initial_balance = 10000
 
@@ -52,19 +52,19 @@ if __name__ == '__main__':
 
 
     obs = env.reset()
-
-    profit = deque(maxlen=2)
+    profit = []
     while True:
         action, _states = model.predict(obs)
         obs, reward, done, info = env.step(action)
         profit.append(env.render(mode='human'))
         if done.all():
-            print(f'Profit: {profit[0]}')
+            print(info[0]['trades'])
+            print(f'Profit: {profit}')
             print('Episode finished after {} timesteps'.format(info[0]['current_step']))
-            obs = env.reset()
-            #break;
+            #obs = env.reset()
+            break;
 
-'''
+            '''
     mean_reward_random, std_reward_random = evaluate_policy(PPO('MlpPolicy', env, verbose=0), env, n_eval_episodes=10, deterministic=True)
     mean_reward, std_reward = evaluate_policy(model, env, n_eval_episodes=10, deterministic=True)
     print('              trained         random')

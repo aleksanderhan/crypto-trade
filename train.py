@@ -27,7 +27,7 @@ def get_coins():
 
 
 
-start_time = '2021-05-16T00:00'
+start_time = '2021-01-01T00:00'
 end_time = '2021-05-20T00:00'
 frame_size = 50
 epochs = 20
@@ -77,5 +77,5 @@ if __name__ == '__main__':
         
         model.save(fname)
 
-        mean_reward, std_reward = evaluate_policy(model, validation_env, n_eval_episodes=5, deterministic=True)
+        mean_reward, std_reward = evaluate_policy(model, validation_env, n_eval_episodes=2, deterministic=True)
         print(e, 'training time:', t1 - t0, 'mean_reward:', mean_reward)

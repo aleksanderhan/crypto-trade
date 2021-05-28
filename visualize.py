@@ -20,7 +20,6 @@ UP_TEXT_COLOR = '#73D3CC'
 DOWN_TEXT_COLOR = '#DC2C27'
 
 
-print(matplotlib.get_backend())
 class StockTradingGraph:
     """A stock trading visualization using matplotlib made to render OpenAI gym environments"""
 
