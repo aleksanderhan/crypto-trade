@@ -115,13 +115,16 @@ class CryptoTradingEnv(gym.Env):
         
         coin_action = ((len(self.coins) - 1) / 2) * (action[2] - 1) + len(self.coins) - 1
 
-        print()
-        print('action_type', action_type)
-        print('amount', amount)
-        print('coin_action', coin_action)
 
         coin = self.coins[int(coin_action)]
-        print('coin', coin)
+        
+        if self.debug:
+            print()
+            print('action_type', action_type)
+            print('amount', amount)
+            print('coin_action', coin_action)
+            print('coin', coin)
+            
         # Set the current price to a random price within the time step
         current_price = random.uniform(self.df.loc[self.current_step, coin + '_low'], self.df.loc[self.current_step, coin + '_high'])
 
@@ -129,27 +132,26 @@ class CryptoTradingEnv(gym.Env):
             print('current_price', current_price)
             print('balance', self.balance)
             print('portfolio', self.portfolio)
+
         if action_type  <= 1 and action_type > 1/3:
             # Buy amount % of balance in shares
             total_possible = self.balance[-1] / current_price
-            print('hmmm', total_possible * (1 - self.fee) * amount)
             coins_bought = max(0, total_possible * (1 - self.fee) * amount)
 
-            print()
-            print(total_possible)
-            print(self.fee)
-            print(1-self.fee)
-            print(amount)
-            print()
-
-
-
-
+            if self.debug:
+                print()
+                print(total_possible)
+                print(self.fee)
+                print(1-self.fee)
+                print(amount)
+                print()
 
             cost = coins_bought * current_price
+            
             if self.debug:
                 print('total_possible', total_possible)
                 print('coins_bought', coins_bought)
+
             self.balance.append(self.balance[-1] - cost)
             self.portfolio[coin].append(self.portfolio[coin][-1] + coins_bought)
 

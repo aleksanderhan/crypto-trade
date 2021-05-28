@@ -13,21 +13,19 @@ from stable_baselines3.common.evaluation import evaluate_policy
 from env import CryptoTradingEnv
 
 
-def get_data(start_time, end_time):
-    r = requests.get(f'http://127.0.0.1:5000/data?start_time={start_time}&end_time={end_time}')
+def get_data(start_time, end_time, coins, granularity):
+    coinsStr = ','.join(coins)
+    r = requests.get(f'http://127.0.0.1:5000/data?start_time={start_time}&end_time={end_time}&coins={coinsStr}&granularity={granularity}')
 
     df = pd.DataFrame.from_dict(r.json())
     print(df)
     df.index = df.index.astype(int)
     return df
 
-def get_coins():
-    r = requests.get('http://127.0.0.1:5000/coins')
-    return r.json()
 
-
-
-start_time = '2021-05-18T00:00'
+coins = ['btc', 'eth', 'ada', 'link', 'algo', 'nmr', 'xlm']
+granularity=60
+start_time = '2021-05-01T00:00'
 end_time = '2021-05-20T00:00'
 frame_size = 50
 epochs = 20
@@ -39,8 +37,8 @@ training_split = 0.8
 
 
 if __name__ == '__main__':
-    coins = get_coins()
-    df = get_data(start_time, end_time)
+
+    df = get_data(start_time, end_time, coins, granularity)
 
     slice_point = int(len(df.index) * training_split)
     train_df = df[:slice_point]
@@ -66,7 +64,11 @@ if __name__ == '__main__':
             vec_env_cls=DummyVecEnv
         )
 
-        model = PPO('MlpPolicy', train_env, verbose=0, n_epochs=epochs)
+        model = PPO('MlpPolicy', 
+                    train_env, 
+                    verbose=0, 
+                    n_epochs=epochs, 
+                    tensorboard_log='./tensorboard/')
         if os.path.isfile(fname + '.zip'):
             model.load(fname)  
 
@@ -77,5 +79,5 @@ if __name__ == '__main__':
         
         model.save(fname)
 
-        mean_reward, std_reward = evaluate_policy(model, validation_env, n_eval_episodes=2, deterministic=True)
+        mean_reward, std_reward = evaluate_policy(model, validation_env, n_eval_episodes=5, deterministic=True)
         print(e, 'training time:', t1 - t0, 'mean_reward:', mean_reward)
