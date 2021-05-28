@@ -24,13 +24,14 @@ def get_data(start_time, end_time, coins, granularity):
 
 
 coins = ['btc', 'eth', 'ada', 'link', 'algo', 'nmr', 'xlm']
+coinsStr = ','.join(coins)
 granularity=60
 start_time = '2021-05-01T00:00'
 end_time = '2021-05-20T00:00'
 frame_size = 50
 epochs = 20
-fname = f'model1-fs{frame_size}'
-episodes = 100
+fname = f'model1-fs{frame_size}-coinsStr-g{granularity}'
+episodes = 10
 max_initial_balance = 20000
 training_split = 0.8
 
@@ -66,7 +67,7 @@ if __name__ == '__main__':
 
         model = PPO('MlpPolicy', 
                     train_env, 
-                    verbose=0, 
+                    verbose=1, 
                     n_epochs=epochs, 
                     tensorboard_log='./tensorboard/')
         if os.path.isfile(fname + '.zip'):
@@ -80,4 +81,4 @@ if __name__ == '__main__':
         model.save(fname)
 
         mean_reward, std_reward = evaluate_policy(model, validation_env, n_eval_episodes=5, deterministic=True)
-        print(e, 'training time:', t1 - t0, 'mean_reward:', mean_reward)
+        print(e, 'training time:', t1 - t0, 'mean_reward:', mean_reward, 'std_reward:', std_reward)

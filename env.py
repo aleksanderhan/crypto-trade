@@ -36,16 +36,13 @@ class CryptoTradingEnv(gym.Env):
         self.debug = debug
 
         # Buy/sell/hold for each coin
-        self.action_space = spaces.Box(low=np.array([-1, -1, -1]), high=np.array([1, 1, 1]), dtype=np.float16)
+        self.action_space = spaces.Box(low=np.array([-1, -1, -1], dtype=np.float16), high=np.array([1, 1, 1], dtype=np.float16), dtype=np.float16)
 
         # prices over the last few days and portfolio status
         self.observation_space = spaces.Box(
-            low=0, 
+            low=0,
             high=np.inf, 
-            shape=(
-                len(coins) * 6 + 3, # num_coins * (portefolio value & candles) + (balance & net worth & timestamp)
-                frame_size
-            ), 
+            shape=((len(coins) * 6 + 3)*frame_size,), # num_coins * (portefolio value & candles) + (balance & net worth & timestamp)
             dtype=np.float32
         )
 
@@ -56,14 +53,6 @@ class CryptoTradingEnv(gym.Env):
         self.current_step += 1
 
         delay_modifier = (self.current_step / self.max_steps)
-
-        '''
-        print('net worth', self.net_worth[-1])
-        print('maxstep', self.max_steps)
-        print('current_step', self.current_step)
-        print(self.portfolio)
-        print()
-        '''
 
         obs = self._next_observation()
         reward = self.net_worth[-1] * delay_modifier
@@ -114,44 +103,19 @@ class CryptoTradingEnv(gym.Env):
         amount = 0.5*(action[1] - 1) + 1 # https://tiagoolivoto.github.io/metan/reference/resca.html
         
         coin_action = ((len(self.coins) - 1) / 2) * (action[2] - 1) + len(self.coins) - 1
-
-
         coin = self.coins[int(coin_action)]
         
-        if self.debug:
-            print()
-            print('action_type', action_type)
-            print('amount', amount)
-            print('coin_action', coin_action)
-            print('coin', coin)
-            
+
         # Set the current price to a random price within the time step
         current_price = random.uniform(self.df.loc[self.current_step, coin + '_low'], self.df.loc[self.current_step, coin + '_high'])
 
-        if self.debug:
-            print('current_price', current_price)
-            print('balance', self.balance)
-            print('portfolio', self.portfolio)
 
         if action_type  <= 1 and action_type > 1/3:
             # Buy amount % of balance in shares
             total_possible = self.balance[-1] / current_price
             coins_bought = max(0, total_possible * (1 - self.fee) * amount)
-
-            if self.debug:
-                print()
-                print(total_possible)
-                print(self.fee)
-                print(1-self.fee)
-                print(amount)
-                print()
-
             cost = coins_bought * current_price
-            
-            if self.debug:
-                print('total_possible', total_possible)
-                print('coins_bought', coins_bought)
-
+    
             self.balance.append(self.balance[-1] - cost)
             self.portfolio[coin].append(self.portfolio[coin][-1] + coins_bought)
 
@@ -167,8 +131,7 @@ class CryptoTradingEnv(gym.Env):
         elif action_type >= -1 and action_type < -1/3:
             # Sell amount % of shares held
             coins_sold = max(0, self.portfolio[coin][-1] * amount)
-            if self.debug:
-                print('coins_sold', coins_sold)
+
             self.balance.append(self.balance[-1] + coins_sold * (1 - self.fee) * current_price)
             self.portfolio[coin].append(self.portfolio[coin][-1] - coins_sold)
 
@@ -181,28 +144,26 @@ class CryptoTradingEnv(gym.Env):
                 'type': 'sell'
                 })
 
-
         self.net_worth.append(self._calculate_net_worth())
         if self.net_worth[-1] > self.max_net_worth:
             self.max_net_worth = self.net_worth[-1]
 
 
     def _next_observation(self):
-        frame = []
+        frame = np.array([])
         for coin in self.coins:
-            #print(self.df.loc[self.current_step - self.frame_size +1: self.current_step, coin + '_open'].values)
-            frame.append(self.df.loc[self.current_step - self.frame_size +1: self.current_step, coin + '_open'].values)
-            frame.append(self.df.loc[self.current_step - self.frame_size +1: self.current_step, coin + '_high'].values)
-            frame.append(self.df.loc[self.current_step - self.frame_size +1: self.current_step, coin + '_low'].values)
-            frame.append(self.df.loc[self.current_step - self.frame_size +1: self.current_step, coin + '_close'].values)
-            frame.append(self.df.loc[self.current_step - self.frame_size +1: self.current_step, coin + '_volume'].values)
-            frame.append(np.array(self.portfolio[coin]))
+            frame = np.concatenate((frame, self.df.loc[self.current_step - self.frame_size +1: self.current_step, coin + '_open'].values))
+            frame = np.concatenate((frame, self.df.loc[self.current_step - self.frame_size +1: self.current_step, coin + '_high'].values))
+            frame = np.concatenate((frame, self.df.loc[self.current_step - self.frame_size +1: self.current_step, coin + '_low'].values))
+            frame = np.concatenate((frame, self.df.loc[self.current_step - self.frame_size +1: self.current_step, coin + '_close'].values))
+            frame = np.concatenate((frame, self.df.loc[self.current_step - self.frame_size +1: self.current_step, coin + '_volume'].values))
+            frame = np.concatenate((frame, np.array(self.portfolio[coin])))
 
-        frame.append(self.df.loc[self.current_step - self.frame_size +1: self.current_step, 'timestamp'].values)
-        frame.append(np.array(self.balance))
-        frame.append(np.array(self.net_worth))
+        frame = np.concatenate((frame, self.df.loc[self.current_step - self.frame_size +1: self.current_step, 'timestamp'].values))
+        frame = np.concatenate((frame, np.array(self.balance)))
+        frame = np.concatenate((frame, np.array(self.net_worth)))
 
-        return np.array(frame)
+        return frame
 
 
     def _calculate_net_worth(self):
