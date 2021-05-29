@@ -20,7 +20,7 @@ UP_TEXT_COLOR = '#73D3CC'
 DOWN_TEXT_COLOR = '#DC2C27'
 
 
-class StockTradingGraph:
+class TradingGraph:
     """A stock trading visualization using matplotlib made to render OpenAI gym environments"""
 
     def __init__(self, df, title=None):

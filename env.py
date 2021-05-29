@@ -7,7 +7,7 @@ import json
 import random
 from collections import deque
 
-from visualize import StockTradingGraph
+from visualize import TradingGraph
 
 LOOKBACK_WINDOW_SIZE = 50
 MAX_VALUE = 3.4e12
@@ -42,7 +42,7 @@ class CryptoTradingEnv(gym.Env):
         self.observation_space = spaces.Box(
             low=0,
             high=np.inf, 
-            shape=((len(coins) * 6 + 3)*frame_size,), # num_coins * (portefolio value & candles) + (balance & net worth & timestamp)
+            shape=((len(coins) * 6 + 3)*frame_size,), # (num_coins * (portefolio value & candles) + (balance & net worth & timestamp)) * frame_size
             dtype=np.float32
         )
 
@@ -91,7 +91,7 @@ class CryptoTradingEnv(gym.Env):
             print(f'Portfolio: {self.portfolio}')
         elif mode == 'human':
             if self.visualization == None:
-              self.visualization = StockTradingGraph(self.df, title)
+              self.visualization = TradingGraph(self.df, title)
             
             if self.current_step > LOOKBACK_WINDOW_SIZE:        
               self.visualization.render(self.current_step, self.net_worth[-1], self.trades, window_size=LOOKBACK_WINDOW_SIZE)

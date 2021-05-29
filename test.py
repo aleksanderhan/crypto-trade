@@ -55,7 +55,7 @@ if __name__ == '__main__':
     while True:
         action, _states = model.predict(obs)
         obs, reward, done, info = env.step(action)
-        profit.append(env.render(mode='human'))
+        profit.append(env.render(mode='console'))
         if done.all():
             print(info[0]['trades'])
             print(f'Profit: {profit}')
