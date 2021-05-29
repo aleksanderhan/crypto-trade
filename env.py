@@ -10,7 +10,7 @@ from collections import deque
 from visualize import StockTradingGraph
 
 LOOKBACK_WINDOW_SIZE = 50
-
+MAX_VALUE = 3.4e12
 
 class CryptoTradingEnv(gym.Env):
     """A crypto trading environment for OpenAI gym"""
@@ -53,9 +53,10 @@ class CryptoTradingEnv(gym.Env):
         self.current_step += 1
 
         delay_modifier = (self.current_step / self.max_steps)
+        profit = self.net_worth[-1] - self.initial_balance
 
         obs = self._next_observation()
-        reward = self.net_worth[-1] * delay_modifier
+        reward = profit * delay_modifier
         done = self.net_worth[-1] <= 0 or self.current_step >= self.max_steps -1 
 
         return obs, reward, done, {'current_step': self.current_step, 'trades': self.trades}

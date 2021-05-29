@@ -5,10 +5,12 @@ import pandas as pd
 import random
 from time import sleep, perf_counter
 
+from stable_baselines3 import PPO, A2C
 from stable_baselines3.common.env_util import make_vec_env
 from stable_baselines3.common.vec_env import SubprocVecEnv, DummyVecEnv
-from stable_baselines3 import PPO
 from stable_baselines3.common.evaluation import evaluate_policy
+from stable_baselines3.common.env_checker import check_env
+
 
 from env import CryptoTradingEnv
 
@@ -30,7 +32,6 @@ start_time = '2021-05-01T00:00'
 end_time = '2021-05-20T00:00'
 frame_size = 50
 epochs = 20
-fname = f'model1-fs{frame_size}-coinsStr-g{granularity}'
 episodes = 10
 max_initial_balance = 20000
 training_split = 0.8
@@ -46,12 +47,14 @@ if __name__ == '__main__':
     test_df = df[slice_point:]
     test_df.reset_index(drop=True, inplace=True)
 
+    test_env = CryptoTradingEnv(frame_size, max_initial_balance, test_df, coins)
+    check_env(test_env)
+
     validation_env = make_vec_env(
-        lambda: CryptoTradingEnv(frame_size, max_initial_balance, test_df, coins), 
+        lambda: test_env, 
         n_envs=1, 
         vec_env_cls=DummyVecEnv
     )
-
 
     for e in range(episodes):
         start_frame = random.randint(0, int(len(train_df.index) * training_split))
@@ -70,6 +73,10 @@ if __name__ == '__main__':
                     verbose=1, 
                     n_epochs=epochs, 
                     tensorboard_log='./tensorboard/')
+
+        model_name = model.__class__.__name__
+        fname = f'{model_name}-fs{frame_size}-g{granularity}-{coinsStr}'
+        
         if os.path.isfile(fname + '.zip'):
             model.load(fname)  
 
@@ -81,4 +88,5 @@ if __name__ == '__main__':
         model.save(fname)
 
         mean_reward, std_reward = evaluate_policy(model, validation_env, n_eval_episodes=5, deterministic=True)
-        print(e, 'training time:', t1 - t0, 'mean_reward:', mean_reward, 'std_reward:', std_reward)
+        print(e, 'training time:', t1 - t0)
+        print('mean_reward:', mean_reward, 'std_reward:', std_reward)

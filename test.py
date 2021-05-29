@@ -27,12 +27,12 @@ def get_data(start_time, end_time, coins, granularity):
 
 coins = ['btc', 'eth', 'ada', 'link', 'algo', 'nmr', 'xlm']
 granularity=60
-start_time = '2021-05-18T00:00'
-end_time = '2021-05-20T00:00'
+start_time = '2021-05-20T00:00'
+end_time = '2021-05-28T00:00'
 frame_size = 50
 epochs = 10
 initial_balance = 10000
-fname = 'model1-fs50'
+fname = 'model0-fs50-g60-btc,eth,ada,link,algo,nmr,xlm'
 
 
 if __name__ == '__main__':
