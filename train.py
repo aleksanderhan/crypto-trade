@@ -29,11 +29,11 @@ coins = ['btc', 'eth', 'ada', 'link', 'algo', 'nmr', 'xlm']
 coinsStr = ','.join(coins)
 policy='MlpPolicy'
 granularity = 60
-start_time = '2021-05-01T00:00'
+start_time = '2021-01-01T00:00'
 end_time = '2021-05-20T00:00'
 frame_size = 50
 epochs = 20
-episodes = 2
+episodes = 100
 max_initial_balance = 20000
 training_split = 0.8
 
@@ -72,7 +72,8 @@ if __name__ == '__main__':
         model = PPO(policy, 
                     train_env, 
                     verbose=1, 
-                    n_epochs=epochs, 
+                    n_epochs=epochs,
+                    device='cpu',
                     tensorboard_log='./tensorboard/')
 
         model_name = model.__class__.__name__

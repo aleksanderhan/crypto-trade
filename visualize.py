@@ -1,7 +1,6 @@
 import numpy as np
 import matplotlib
 matplotlib.use('TkAgg')
-#matplotlib.use('GTK3Agg')
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 from matplotlib import style
@@ -23,8 +22,9 @@ DOWN_TEXT_COLOR = '#DC2C27'
 class TradingGraph:
     """A stock trading visualization using matplotlib made to render OpenAI gym environments"""
 
-    def __init__(self, df, title=None):
+    def __init__(self, df, coins, title=None):
         self.df = df
+        self.coins = coins
         self.net_worths = np.zeros(len(df.index))
 
         # Create a figure on screen and set the title

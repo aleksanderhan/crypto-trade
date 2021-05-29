@@ -27,12 +27,13 @@ def get_data(start_time, end_time, coins, granularity):
 
 coins = ['btc', 'eth', 'ada', 'link', 'algo', 'nmr', 'xlm']
 granularity=60
-start_time = '2021-05-20T00:00'
+start_time = '2021-05-25T00:00'
 end_time = '2021-05-28T00:00'
 frame_size = 50
 epochs = 10
 initial_balance = 10000
-fname = 'PPO-fs50-g60-btc,eth,ada,link,algo,nmr,xlm'
+fname = 'PPO-MlpPolicy-fs50-g60-btc,eth,ada,link,algo,nmr,xlm'
+policy = fname.split('-')[1]
 play_simulation = True
 
 
@@ -46,7 +47,7 @@ if __name__ == '__main__':
     env = make_vec_env(lambda: env, n_envs=1, vec_env_cls=DummyVecEnv)
 
 
-    model = PPO('MlpPolicy', env, verbose=0, n_epochs=epochs)
+    model = PPO(policy, env, verbose=0, n_epochs=epochs)
     if os.path.isfile(fname + '.zip'):
         model.load(fname) 
 
@@ -56,7 +57,7 @@ if __name__ == '__main__':
         while True:
             action, _states = model.predict(obs)
             obs, reward, done, info = env.step(action)
-            profit.append(env.render(mode='console'))
+            profit.append(env.render(mode='human'))
             if done.all():
                 print(f'Profit: {profit[0]}')
                 print('Episode finished after {} timesteps'.format(info[0]['current_step']))
@@ -64,8 +65,8 @@ if __name__ == '__main__':
                 break;
     
             
-    mean_reward_random, std_reward_random = evaluate_policy(PPO('MlpPolicy', env, verbose=0), env, n_eval_episodes=10, deterministic=True)
-    mean_reward, std_reward = evaluate_policy(model, env, n_eval_episodes=10, deterministic=True)
+    mean_reward_random, std_reward_random = evaluate_policy(PPO('MlpPolicy', env, verbose=0), env, n_eval_episodes=5, deterministic=True)
+    mean_reward, std_reward = evaluate_policy(model, env, n_eval_episodes=5, deterministic=True)
     print('              trained         random')
     print('mean_reward', mean_reward, mean_reward_random)
     print('std_reward', std_reward, std_reward_random)
