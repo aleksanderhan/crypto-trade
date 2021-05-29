@@ -32,7 +32,8 @@ end_time = '2021-05-28T00:00'
 frame_size = 50
 epochs = 10
 initial_balance = 10000
-fname = 'model0-fs50-g60-btc,eth,ada,link,algo,nmr,xlm'
+fname = 'PPO-fs50-g60-btc,eth,ada,link,algo,nmr,xlm'
+play_simulation = True
 
 
 if __name__ == '__main__':
@@ -40,7 +41,7 @@ if __name__ == '__main__':
     max_steps = len(data.index) - frame_size
 
 
-    env = CryptoTradingEnv(frame_size, initial_balance, data, coins, debug=False)
+    env = CryptoTradingEnv(frame_size, initial_balance, data, coins, fee=0, debug=False)
     check_env(env)
     env = make_vec_env(lambda: env, n_envs=1, vec_env_cls=DummyVecEnv)
 
@@ -49,20 +50,19 @@ if __name__ == '__main__':
     if os.path.isfile(fname + '.zip'):
         model.load(fname) 
 
-
-    obs = env.reset()
-    profit = deque(maxlen=2)
-    while True:
-        action, _states = model.predict(obs)
-        obs, reward, done, info = env.step(action)
-        profit.append(env.render(mode='console'))
-        if done.all():
-            print(info[0]['trades'])
-            print(f'Profit: {profit}')
-            print('Episode finished after {} timesteps'.format(info[0]['current_step']))
-            #obs = env.reset()
-            break;
-
+    if play_simulation:
+        obs = env.reset()
+        profit = deque(maxlen=2)
+        while True:
+            action, _states = model.predict(obs)
+            obs, reward, done, info = env.step(action)
+            profit.append(env.render(mode='console'))
+            if done.all():
+                print(f'Profit: {profit[0]}')
+                print('Episode finished after {} timesteps'.format(info[0]['current_step']))
+                #obs = env.reset()
+                break;
+    
             
     mean_reward_random, std_reward_random = evaluate_policy(PPO('MlpPolicy', env, verbose=0), env, n_eval_episodes=10, deterministic=True)
     mean_reward, std_reward = evaluate_policy(model, env, n_eval_episodes=10, deterministic=True)

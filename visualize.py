@@ -164,8 +164,8 @@ class TradingGraph:
         self._render_trades(current_step, trades, step_range)
 
         # Format the date ticks to be more easily read
-        self.price_ax.set_xticklabels(self.df['timestamp'].values[step_range], rotation=45,
-                                      horizontalalignment='right')
+        self.price_ax.figure.canvas.draw()
+        self.price_ax.tick_params(axis='x',which='major', rotation=45)
 
         # Hide duplicate net worth date labels
         plt.setp(self.net_worth_ax.get_xticklabels(), visible=False)

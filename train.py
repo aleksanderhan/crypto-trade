@@ -27,12 +27,13 @@ def get_data(start_time, end_time, coins, granularity):
 
 coins = ['btc', 'eth', 'ada', 'link', 'algo', 'nmr', 'xlm']
 coinsStr = ','.join(coins)
-granularity=60
+policy='MlpPolicy'
+granularity = 60
 start_time = '2021-05-01T00:00'
 end_time = '2021-05-20T00:00'
 frame_size = 50
 epochs = 20
-episodes = 10
+episodes = 2
 max_initial_balance = 20000
 training_split = 0.8
 
@@ -48,7 +49,7 @@ if __name__ == '__main__':
     test_df.reset_index(drop=True, inplace=True)
 
     test_env = CryptoTradingEnv(frame_size, max_initial_balance, test_df, coins)
-    check_env(test_env)
+    #check_env(test_env)
 
     validation_env = make_vec_env(
         lambda: test_env, 
@@ -68,14 +69,14 @@ if __name__ == '__main__':
             vec_env_cls=DummyVecEnv
         )
 
-        model = PPO('MlpPolicy', 
+        model = PPO(policy, 
                     train_env, 
                     verbose=1, 
                     n_epochs=epochs, 
                     tensorboard_log='./tensorboard/')
 
         model_name = model.__class__.__name__
-        fname = f'{model_name}-fs{frame_size}-g{granularity}-{coinsStr}'
+        fname = f'{model_name}-{policy}-fs{frame_size}-g{granularity}-{coinsStr}'
         
         if os.path.isfile(fname + '.zip'):
             model.load(fname)  
@@ -87,6 +88,7 @@ if __name__ == '__main__':
         
         model.save(fname)
 
-        mean_reward, std_reward = evaluate_policy(model, validation_env, n_eval_episodes=5, deterministic=True)
         print(e, 'training time:', t1 - t0)
-        print('mean_reward:', mean_reward, 'std_reward:', std_reward)
+
+    mean_reward, std_reward = evaluate_policy(model, validation_env, n_eval_episodes=10, deterministic=True)
+    print('mean_reward:', mean_reward, 'std_reward:', std_reward)
