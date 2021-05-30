@@ -31,7 +31,7 @@ def objective_fn(trial):
     env_params = optimize_envs(trial)
     model_params = optimize_ppo(trial)
 
-    train_env, test_df = initialize_envs(env_params)
+    train_env, validation_env = initialize_envs(env_params)
 
     model = PPO('MlpPolicy',
                 train_env, 
