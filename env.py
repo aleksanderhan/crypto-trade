@@ -183,9 +183,7 @@ class CryptoTradingEnv(gym.Env):
 
     def render(self, mode='console', title=None, **kwargs):
         # Render the environment to the screen
-        profit = self.get_profit()
-
-        
+        profit = self.get_profit()        
         
         if mode == 'console':
             print(f'Last_trade: {self._get_last_trade()}')

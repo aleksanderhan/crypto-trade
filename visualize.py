@@ -32,15 +32,14 @@ class TradingGraph:
         fig.suptitle(title)
 
         # Create top subplot for net worth axis
-        self.net_worth_ax = plt.subplot2grid(
-            (6, 1), (0, 0), rowspan=2, colspan=1)
+        self.net_worth_ax = plt.subplot2grid((10, 1), (0, 0), rowspan=2, colspan=1)
 
         # Create bottom subplot for shared price/volume axis
-        self.price_ax = plt.subplot2grid(
-            (6, 1), (2, 0), rowspan=8, colspan=1, sharex=self.net_worth_ax)
+        self.price_ax = plt.subplot2grid((10, 1), (2, 0), rowspan=8, colspan=1, sharex=self.net_worth_ax)
 
-        # Create a new axis for volume which shares its x-axis with price
-        self.volume_ax = self.price_ax.twinx()
+        self.price_ax2 = plt.subplot2grid((10, 1), (6, 0), rowspan=8, colspan=1, sharex=self.net_worth_ax)
+
+
 
         # Add padding to make graph easier to view
         plt.subplots_adjust(left=0.11, bottom=0.24,
@@ -106,26 +105,6 @@ class TradingGraph:
         self.price_ax.set_ylim(ylim[0] - (ylim[1] - ylim[0])
                                * VOLUME_CHART_HEIGHT, ylim[1])
 
-    def _render_volume(self, current_step, net_worth, dates, step_range):
-        self.volume_ax.clear()
-
-        volume = np.array(self.df['btc_volume'].values[step_range])
-
-        pos = self.df['btc_open'].values[step_range] - \
-            self.df['btc_close'].values[step_range] < 0
-        neg = self.df['btc_open'].values[step_range] - \
-            self.df['btc_close'].values[step_range] > 0
-
-        # Color volume bars based on price direction on that date
-        self.volume_ax.bar(dates[pos], volume[pos], color=UP_COLOR,
-                           alpha=0.4, width=1, align='center')
-        self.volume_ax.bar(dates[neg], volume[neg], color=DOWN_COLOR,
-                           alpha=0.4, width=1, align='center')
-
-        # Cap volume axis height below price chart and hide ticks
-        self.volume_ax.set_ylim(0, max(volume) / VOLUME_CHART_HEIGHT)
-        self.volume_ax.yaxis.set_ticks([])
-
     def _render_trades(self, current_step, trades, step_range):
         for trade in trades:
             if trade['step'] in step_range:
@@ -155,9 +134,11 @@ class TradingGraph:
         window_start = max(current_step - window_size, 0)
         step_range = range(window_start, current_step + 1)
 
+        # Format dates as timestamps, necessary for candlestick graph
+        dates = np.array(self.df['timestamp'].values[step_range])
+
         self._render_net_worth(current_step, net_worth, step_range, dates)
         self._render_price(current_step, net_worth, dates, step_range)
-        self._render_volume(current_step, net_worth, dates, step_range)
         self._render_trades(current_step, trades, step_range)
 
         # Format the date ticks to be more easily read

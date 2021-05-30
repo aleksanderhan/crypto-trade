@@ -11,8 +11,8 @@ from stable_baselines3.common.vec_env import SubprocVecEnv, DummyVecEnv
 from stable_baselines3.common.evaluation import evaluate_policy
 from stable_baselines3.common.env_checker import check_env
 
-
 from env import CryptoTradingEnv
+from test import run_n_test
 
 
 def get_data(start_time, end_time, coins, granularity):
@@ -29,7 +29,7 @@ coins = ['btc', 'eth', 'ada', 'link', 'algo', 'nmr', 'xlm'] # 'FIL', 'STORJ', 'A
 coins_str = ','.join(coins)
 policy='MlpPolicy'
 granularity = 60
-start_time = '2019-01-01T00:00'
+start_time = '2021-01-01T00:00'
 end_time = '2021-05-20T00:00'
 frame_size = 100
 epochs = 20

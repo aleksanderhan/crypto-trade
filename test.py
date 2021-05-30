@@ -56,7 +56,7 @@ initial_balance = 10000
 fname = 'PPO-MlpPolicy-fs50-g60-btc,eth,ada,link,algo,nmr,xlm'
 policy = fname.split('-')[1]
 episodes = 3
-render = False
+render = True
 
 
 if __name__ == '__main__':
