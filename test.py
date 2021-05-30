@@ -32,7 +32,7 @@ def test_model(model, env, render):
         action, _states = model.predict(obs)
         obs, reward, done, info = env.step(action)
         if render:
-            env.render(mode='human')
+            env.render(mode='console')
         print(info[0]['current_step'], '/', info[0]['max_steps'], end="\r", flush=True)
 
     return info[0]['profit']

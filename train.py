@@ -31,12 +31,12 @@ policy='MlpPolicy'
 granularity = 60
 start_time = '2021-01-01T00:00'
 end_time = '2021-05-20T00:00'
-frame_size = 100
+frame_size = 24*60 # 1 day
 epochs = 20
 episodes = 1000
 max_initial_balance = 50000
-training_split = 0.9
-reward_func = 'omega' # sortino, calmar, omega
+training_split = 0.98
+reward_func = 'sortino' # sortino, calmar, omega
 
 
 
@@ -66,8 +66,8 @@ if __name__ == '__main__':
 
         train_env = make_vec_env(
             lambda: CryptoTradingEnv(frame_size, max_initial_balance, episode_df, coins, reward_func), 
-            n_envs=1, 
-            vec_env_cls=DummyVecEnv
+            n_envs=16, 
+            vec_env_cls=SubprocVecEnv
         )
 
         model = PPO(policy, 
@@ -85,13 +85,15 @@ if __name__ == '__main__':
 
 
         t0 = perf_counter()
-        model.learn(total_timesteps=len(episode_df.index))
+        for _ in range(3):
+            model.learn(total_timesteps=len(episode_df.index))
         t1 = perf_counter()
         
         model.save(fname)
 
         print(e, 'training time:', t1 - t0)
-        run_n_test(model, validation_env, 1, False)
+        mean_reward, std_reward = evaluate_policy(model, validation_env, n_eval_episodes=5, deterministic=True)
+        print('mean_reward:', mean_reward, 'std_reward:', std_reward)
 
 
     run_n_test(model, validation_env, 5, False)
