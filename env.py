@@ -169,19 +169,19 @@ class CryptoTradingEnv(gym.Env):
             close_values = self.df.loc[self.current_step - self.frame_size +1: self.current_step, coin + '_close'].values
             volume_values = self.df.loc[self.current_step - self.frame_size +1: self.current_step, coin + '_volume'].values
 
-            frame = np.concatenate((frame, np.diff(np.log(open_values))))
-            frame = np.concatenate((frame, np.diff(np.log(high_values))))
-            frame = np.concatenate((frame, np.diff(np.log(low_values))))
-            frame = np.concatenate((frame, np.diff(np.log(close_values))))
-            frame = np.concatenate((frame, np.diff(np.log(volume_values))))
+            frame = np.concatenate((frame, np.diff(open_values)))
+            frame = np.concatenate((frame, np.diff(high_values)))
+            frame = np.concatenate((frame, np.diff(low_values)))
+            frame = np.concatenate((frame, np.diff(close_values)))
+            frame = np.concatenate((frame, np.diff(volume_values)))
 
-            frame = np.concatenate((frame, np.diff(np.log(self.portfolio[coin]))))
+            frame = np.concatenate((frame, np.diff(self.portfolio[coin])))
 
         timestamp_values = self.df.loc[self.current_step - self.frame_size +1: self.current_step, 'timestamp'].values
-        frame = np.concatenate((frame, np.diff(np.log(timestamp_values))))
+        frame = np.concatenate((frame, np.diff(timestamp_values)))
 
-        frame = np.concatenate((frame, np.diff(np.log(self.balance))))
-        frame = np.concatenate((frame, np.diff(np.log(self.net_worth))))
+        frame = np.concatenate((frame, np.diff(self.balance)))
+        frame = np.concatenate((frame, np.diff(self.net_worth)))
         return np.nan_to_num(frame)
 
 

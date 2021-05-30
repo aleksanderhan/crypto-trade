@@ -45,8 +45,8 @@ if __name__ == '__main__':
 
     validation_env = make_vec_env(
         lambda: test_env, 
-        n_envs=1, 
-        vec_env_cls=DummyVecEnv
+        n_envs=16,
+        vec_env_cls=SubprocVecEnv
     )
 
     for e in range(episodes):
@@ -57,8 +57,8 @@ if __name__ == '__main__':
 
         train_env = make_vec_env(
             lambda: CryptoTradingEnv(max_initial_balance, episode_df, coins, reward_func, **env_params), 
-            n_envs=1, 
-            vec_env_cls=DummyVecEnv
+            n_envs=16,
+            vec_env_cls=SubprocVecEnv
         )
 
         model = PPO(policy, 
