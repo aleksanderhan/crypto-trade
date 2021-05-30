@@ -114,7 +114,7 @@ class CryptoTradingEnv(gym.Env):
         # Set the current price to a random price within the time step
         current_price = random.uniform(self.df.loc[self.current_step, coin + '_low'], self.df.loc[self.current_step, coin + '_high'])
 
-        if current_price > 0:
+        if current_price > 0: # Price is 0 before ICO
             if action_type  <= 1 and action_type > 1/3:
                 # Buy amount % of balance in shares
                 total_possible = self.balance[-1] / current_price
@@ -130,7 +130,8 @@ class CryptoTradingEnv(gym.Env):
                     'coin': coin,
                     'coins_bought': coins_bought, 
                     'total': cost,
-                    'type': 'buy'
+                    'type': 'buy',
+                    'price': current_price
                     })
 
             elif action_type >= -1 and action_type < -1/3:
@@ -146,8 +147,13 @@ class CryptoTradingEnv(gym.Env):
                     'coin': coin,
                     'coins_sold': coins_sold, 
                     'total': coins_sold * current_price,
-                    'type': 'sell'
+                    'type': 'sell',
+                    'price': current_price
                     })
+            else:
+                # Hold
+                pass
+
 
         self.net_worth.append(self._calculate_net_worth())
         if self.net_worth[-1] > self.max_net_worth:
@@ -210,6 +216,7 @@ class CryptoTradingEnv(gym.Env):
             print(f'Balance: {self.balance[-1]} (Initial balance: {self.initial_balance})')
             print(f'Net worth: {self.net_worth[-1]} (Max net worth: {self.max_net_worth})')
             print(f'Profit: {profit}')
+            print(f'Reward: {self._get_reward()}')
             print()
 
         elif mode == 'human':

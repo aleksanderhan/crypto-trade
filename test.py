@@ -1,4 +1,4 @@
-import os
+import os, sys
 import requests
 import pandas as pd
 import numpy as np
@@ -32,7 +32,7 @@ def test_model(model, env, render):
         action, _states = model.predict(obs)
         obs, reward, done, info = env.step(action)
         if render:
-            env.render(mode='console')
+            env.render(mode='human')
         print(info[0]['current_step'], '/', info[0]['max_steps'], end="\r", flush=True)
 
     return info[0]['profit']
@@ -50,17 +50,18 @@ def run_n_test(model, env, n, render=False):
 start_time = '2021-05-25T00:00'
 end_time = '2021-05-28T00:00'
 initial_balance = 10000
-fname = 'PPO-MlpPolicy-omega-fs100-g60-btc,eth,ada,link,algo,nmr,xlm'
-policy = fname.split('-')[1]
-reward_func = fname.split('-')[2]
-frame_size = int(fname.split('-')[3].strip('fs'))
-granularity = int(fname.split('-')[4].strip('g'))
-coins = fname.split('-')[-1].split(',')
 episodes = 3
-render = False
+render = True
 
 
 if __name__ == '__main__':
+    fname = sys.argv[1].split('.')[0]
+    policy = fname.split('-')[1]
+    reward_func = fname.split('-')[2]
+    frame_size = int(fname.split('-')[3].strip('fs'))
+    granularity = int(fname.split('-')[4].strip('g'))
+    coins = fname.split('-')[-1].split(',')
+
     data = get_data(start_time, end_time, coins, granularity)
     max_steps = len(data.index) - frame_size
 
@@ -73,8 +74,8 @@ if __name__ == '__main__':
     model = PPO(policy, env, verbose=1)
     
 
-    print('Untrained:')
-    run_n_test(model, env, episodes, render)
+    #print('Untrained:')
+    #run_n_test(model, env, episodes, render)
 
     if os.path.isfile(fname + '.zip'):
         model.load(fname)
@@ -82,4 +83,6 @@ if __name__ == '__main__':
     print()
     print('Trained:')
     run_n_test(model, env, episodes, render)
-    
+
+    #mean_reward, std_reward = evaluate_policy(model, env, n_eval_episodes=5, deterministic=True)
+    #print('mean_reward:', mean_reward, 'std_reward:', std_reward)

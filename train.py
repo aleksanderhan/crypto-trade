@@ -25,7 +25,7 @@ def get_data(start_time, end_time, coins, granularity):
     return df
 
 
-coins = ['btc', 'eth', 'ada', 'link', 'algo', 'nmr', 'xlm'] # 'FIL', 'STORJ', 'AAVE', 'COMP', 'LTC', 
+coins = ['btc'] #, 'eth', 'ada', 'link', 'algo', 'nmr', 'xlm'] # 'FIL', 'STORJ', 'AAVE', 'COMP', 'LTC', 
 coins_str = ','.join(coins)
 policy='MlpPolicy'
 granularity = 60
@@ -91,5 +91,7 @@ if __name__ == '__main__':
         model.save(fname)
 
         print(e, 'training time:', t1 - t0)
+        run_n_test(model, validation_env, 1, False)
 
-    run_n_test(model, validation_env, 3, False)
+
+    run_n_test(model, validation_env, 5, False)
