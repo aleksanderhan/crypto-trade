@@ -19,6 +19,7 @@ training_split = 0.8
 max_initial_balance = 50000
 reward_func = 'sortino'
 
+
 df = get_data(start_time, end_time, coins, 60)
 
 
@@ -44,7 +45,7 @@ def objective_fn(trial):
     rewards, done = [], False
 
     obs = validation_env.reset()
-    for i in range(len(validation_env.df)):
+    for i in range(len(validation_env.get_attr('df')[0].index)):
         action, _states = model.predict(obs)
         obs, reward, done, _ = validation_env.step(action)
         rewards.append(reward)
@@ -67,7 +68,7 @@ def optimize_ppo(trial):
 
 def optimize_envs(trial):
     return {
-        'frame_size': int(trial.suggest_loguniform('frame_size', 10, 2000)),
+        'frame_size': int(trial.suggest_uniform('frame_size', 10, 2000)),
     }
 
 
