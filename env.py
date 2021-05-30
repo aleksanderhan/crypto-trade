@@ -9,7 +9,7 @@ from collections import deque
 
 from visualize import TradingGraph
 
-LOOKBACK_WINDOW_SIZE = 50
+LOOKBACK_WINDOW_SIZE = 100
 MAX_VALUE = 3.4e38 # Max float 32
 
 
@@ -43,7 +43,7 @@ class CryptoTradingEnv(gym.Env):
         self.observation_space = spaces.Box(
             low=-MAX_VALUE,
             high=MAX_VALUE, 
-            shape=((len(coins) * 6 + 3) * (frame_size-1),), # (num_coins * (portefolio value & candles) + (balance & net worth & timestamp)) * frame_size
+            shape=((len(coins) * 6 + 3) * (frame_size-1),), # (num_coins * (portefolio value & candles) + (balance & net worth & timestamp)) * frame_size -1
             dtype=np.float32
         )
 
@@ -54,13 +54,18 @@ class CryptoTradingEnv(gym.Env):
         self.current_step += 1
 
         #delay_modifier = (self.current_step / self.max_steps)
-        #profit = self.net_worth[-1] - self.initial_balance
+        #profit = self.get_profit()
 
         obs = self._next_observation()
         reward = self.net_worth[-1] - self.net_worth[-2]
-        done = self.net_worth[-1] <= 0 or self.current_step >= self.max_steps -1 
+        done = self.net_worth[-1] <= 0 or self.current_step >= self.max_steps
 
-        return obs, reward, done, {'current_step': self.current_step, 'last_trade': self._get_last_trade()}
+        return obs, reward, done, {
+            'current_step': self.current_step, 
+            'last_trade': self._get_last_trade(),
+            'profit': self.get_profit(),
+            'max_steps': self.max_steps
+            }
 
 
     def reset(self, training=True):
@@ -82,9 +87,6 @@ class CryptoTradingEnv(gym.Env):
         return self._next_observation()
 
 
-    
-
-
     def _take_action(self, action):
         action_type = action[0]
         amount = 0.5*(action[1] - 1) + 1 # https://tiagoolivoto.github.io/metan/reference/resca.html
@@ -95,39 +97,40 @@ class CryptoTradingEnv(gym.Env):
         # Set the current price to a random price within the time step
         current_price = random.uniform(self.df.loc[self.current_step, coin + '_low'], self.df.loc[self.current_step, coin + '_high'])
 
-        if action_type  <= 1 and action_type > 1/3:
-            # Buy amount % of balance in shares
-            total_possible = self.balance[-1] / current_price
-            coins_bought = max(0, total_possible * (1 - self.fee) * amount)
-            cost = coins_bought * current_price
-    
-            self.balance.append(self.balance[-1] - cost)
-            self.portfolio[coin].append(self.portfolio[coin][-1] + coins_bought)
+        if current_price > 0:
+            if action_type  <= 1 and action_type > 1/3:
+                # Buy amount % of balance in shares
+                total_possible = self.balance[-1] / current_price
+                coins_bought = max(0, total_possible * (1 - self.fee) * amount)
+                cost = coins_bought * current_price
+        
+                self.balance.append(self.balance[-1] - cost)
+                self.portfolio[coin].append(self.portfolio[coin][-1] + coins_bought)
 
-            if coins_bought > 0:
-              self.trades.append({
-                'step': self.current_step,
-                'coin': coin,
-                'coins_bought': coins_bought, 
-                'total': cost,
-                'type': 'buy'
-                })
+                if coins_bought > 0:
+                  self.trades.append({
+                    'step': self.current_step,
+                    'coin': coin,
+                    'coins_bought': coins_bought, 
+                    'total': cost,
+                    'type': 'buy'
+                    })
 
-        elif action_type >= -1 and action_type < -1/3:
-            # Sell amount % of shares held
-            coins_sold = max(0, self.portfolio[coin][-1] * amount)
+            elif action_type >= -1 and action_type < -1/3:
+                # Sell amount % of shares held
+                coins_sold = max(0, self.portfolio[coin][-1] * amount)
 
-            self.balance.append(self.balance[-1] + coins_sold * (1 - self.fee) * current_price)
-            self.portfolio[coin].append(self.portfolio[coin][-1] - coins_sold)
+                self.balance.append(self.balance[-1] + coins_sold * (1 - self.fee) * current_price)
+                self.portfolio[coin].append(self.portfolio[coin][-1] - coins_sold)
 
-            if coins_sold > 0:
-              self.trades.append({
-                'step': self.current_step,
-                'coin': coin,
-                'coins_sold': coins_sold, 
-                'total': coins_sold * current_price,
-                'type': 'sell'
-                })
+                if coins_sold > 0:
+                  self.trades.append({
+                    'step': self.current_step,
+                    'coin': coin,
+                    'coins_sold': coins_sold, 
+                    'total': coins_sold * current_price,
+                    'type': 'sell'
+                    })
 
         self.net_worth.append(self._calculate_net_worth())
         if self.net_worth[-1] > self.max_net_worth:
@@ -157,7 +160,7 @@ class CryptoTradingEnv(gym.Env):
         frame = np.concatenate((frame, np.array([self.balance[i] - self.balance[i-1] for i in range(1, len(self.balance))])))
         frame = np.concatenate((frame, np.array([self.net_worth[i] - self.net_worth[i-1] for i in range(1, len(self.net_worth))])))
         return frame
-        
+
 
     def _calculate_net_worth(self):
         portfolio_value = 0
@@ -174,16 +177,25 @@ class CryptoTradingEnv(gym.Env):
             return None
 
 
+    def get_profit(self):
+        return self.net_worth[-1] - self.initial_balance
+
+
     def render(self, mode='console', title=None, **kwargs):
         # Render the environment to the screen
-        profit = self.net_worth[-1] - self.initial_balance
+        profit = self.get_profit()
 
+        
+        
         if mode == 'console':
+            print(f'Last_trade: {self._get_last_trade()}')
+            for coin in self.coins:
+                print(coin, self.portfolio[coin][-1])
             print(f'Step: {self.current_step} of {self.max_steps}')
-            print(f'Balance: {self.balance[-1]}')
+            print(f'Balance: {self.balance[-1]} (Initial balance: {self.initial_balance})')
             print(f'Net worth: {self.net_worth[-1]} (Max net worth: {self.max_net_worth})')
             print(f'Profit: {profit}')
-            print(f'Last_trade: {self._get_last_trade()}')
+            print()
 
         elif mode == 'human':
             if self.visualization == None:
@@ -191,8 +203,11 @@ class CryptoTradingEnv(gym.Env):
             
             if self.current_step > LOOKBACK_WINDOW_SIZE:        
                 self.visualization.render(self.current_step, self.net_worth[-1], self.trades, window_size=LOOKBACK_WINDOW_SIZE)
-        
-        return profit
+            print(f'Step: {self.current_step} of {self.max_steps}')
+            print(f'Balance: {self.balance[-1]} (Initial balance: {self.initial_balance})')
+            print(f'Net worth: {self.net_worth[-1]} (Max net worth: {self.max_net_worth})')
+            print(f'Profit: {profit}')
+            print()
 
 
     def close(self):

@@ -155,9 +155,6 @@ class TradingGraph:
         window_start = max(current_step - window_size, 0)
         step_range = range(window_start, current_step + 1)
 
-        # Format dates as timestamps, necessary for candlestick graph
-        dates = np.array(self.df['timestamp'].values[step_range])
-
         self._render_net_worth(current_step, net_worth, step_range, dates)
         self._render_price(current_step, net_worth, dates, step_range)
         self._render_volume(current_step, net_worth, dates, step_range)

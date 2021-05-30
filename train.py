@@ -3,7 +3,7 @@ import gym
 import requests
 import pandas as pd
 import random
-from time import sleep, perf_counter
+from time import perf_counter
 
 from stable_baselines3 import PPO, A2C
 from stable_baselines3.common.env_util import make_vec_env
@@ -25,16 +25,16 @@ def get_data(start_time, end_time, coins, granularity):
     return df
 
 
-coins = ['btc', 'eth', 'ada', 'link', 'algo', 'nmr', 'xlm']
-coinsStr = ','.join(coins)
+coins = ['btc', 'eth', 'ada', 'link', 'algo', 'nmr', 'xlm'] # 'FIL', 'STORJ', 'AAVE', 'COMP', 'LTC', 
+coins_str = ','.join(coins)
 policy='MlpPolicy'
 granularity = 60
-start_time = '2021-01-01T00:00'
+start_time = '2019-01-01T00:00'
 end_time = '2021-05-20T00:00'
-frame_size = 50
+frame_size = 100
 epochs = 20
-episodes = 100
-max_initial_balance = 20000
+episodes = 1000
+max_initial_balance = 50000
 training_split = 0.8
 
 
@@ -77,7 +77,7 @@ if __name__ == '__main__':
                     tensorboard_log='./tensorboard/')
 
         model_name = model.__class__.__name__
-        fname = f'{model_name}-{policy}-fs{frame_size}-g{granularity}-{coinsStr}'
+        fname = f'{model_name}-{policy}-fs{frame_size}-g{granularity}-{coins_str}'
         
         if os.path.isfile(fname + '.zip'):
             model.load(fname)  
@@ -91,5 +91,4 @@ if __name__ == '__main__':
 
         print(e, 'training time:', t1 - t0)
 
-    mean_reward, std_reward = evaluate_policy(model, validation_env, n_eval_episodes=10, deterministic=True)
-    print('mean_reward:', mean_reward, 'std_reward:', std_reward)
+        run_n_test(model, validation_env, episodes, render)
