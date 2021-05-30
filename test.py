@@ -22,7 +22,7 @@ def get_data(start_time, end_time, coins, granularity):
     print(df)
     df.index = df.index.astype(int)
     return df
-import sys
+
 
 def test_model(model, env, render):
     obs = env.reset()
@@ -32,7 +32,7 @@ def test_model(model, env, render):
         action, _states = model.predict(obs)
         obs, reward, done, info = env.step(action)
         if render:
-            env.render(mode='human')
+            env.render(mode='console')
         print(info[0]['current_step'], '/', info[0]['max_steps'], end="\r", flush=True)
 
     return info[0]['profit']
@@ -50,13 +50,14 @@ def run_n_test(model, env, n, render=False):
 start_time = '2021-05-25T00:00'
 end_time = '2021-05-28T00:00'
 initial_balance = 10000
-fname = 'PPO-MlpPolicy-fs50-g60-btc,eth,ada,link,algo,nmr,xlm'
+fname = 'PPO-MlpPolicy-omega-fs100-g60-btc,eth,ada,link,algo,nmr,xlm'
 policy = fname.split('-')[1]
-frame_size = int(fname.split('-')[2].strip('fs'))
-granularity = int(fname.split('-')[3].strip('g'))
+reward_func = fname.split('-')[2]
+frame_size = int(fname.split('-')[3].strip('fs'))
+granularity = int(fname.split('-')[4].strip('g'))
 coins = fname.split('-')[-1].split(',')
 episodes = 3
-render = True
+render = False
 
 
 if __name__ == '__main__':
@@ -64,7 +65,7 @@ if __name__ == '__main__':
     max_steps = len(data.index) - frame_size
 
 
-    env = CryptoTradingEnv(frame_size, initial_balance, data, coins, fee=0, debug=False)
+    env = CryptoTradingEnv(frame_size, initial_balance, data, coins, reward_func, debug=False)
     #check_env(env)
     env = make_vec_env(lambda: env, n_envs=1, vec_env_cls=DummyVecEnv)
 

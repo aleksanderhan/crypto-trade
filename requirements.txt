@@ -1,3 +1,4 @@
 stable-baselines3[extra]
 matplotlib==3.2.2
 tkinter
+empyrical

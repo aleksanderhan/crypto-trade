@@ -35,7 +35,8 @@ frame_size = 100
 epochs = 20
 episodes = 1000
 max_initial_balance = 50000
-training_split = 0.8
+training_split = 0.9
+reward_func = 'omega' # sortino, calmar, omega
 
 
 
@@ -48,7 +49,7 @@ if __name__ == '__main__':
     test_df = df[slice_point:]
     test_df.reset_index(drop=True, inplace=True)
 
-    test_env = CryptoTradingEnv(frame_size, max_initial_balance, test_df, coins)
+    test_env = CryptoTradingEnv(frame_size, max_initial_balance, test_df, coins, reward_func)
     #check_env(test_env)
 
     validation_env = make_vec_env(
@@ -64,20 +65,20 @@ if __name__ == '__main__':
         episode_df.reset_index(drop=True, inplace=True)
 
         train_env = make_vec_env(
-            lambda: CryptoTradingEnv(frame_size, max_initial_balance, episode_df, coins), 
+            lambda: CryptoTradingEnv(frame_size, max_initial_balance, episode_df, coins, reward_func), 
             n_envs=1, 
             vec_env_cls=DummyVecEnv
         )
 
         model = PPO(policy, 
                     train_env, 
-                    verbose=1, 
+                    verbose=0, 
                     n_epochs=epochs,
                     device='cpu',
                     tensorboard_log='./tensorboard/')
 
         model_name = model.__class__.__name__
-        fname = f'{model_name}-{policy}-fs{frame_size}-g{granularity}-{coins_str}'
+        fname = f'{model_name}-{policy}-{reward_func}-fs{frame_size}-g{granularity}-{coins_str}'
         
         if os.path.isfile(fname + '.zip'):
             model.load(fname)  
@@ -91,4 +92,4 @@ if __name__ == '__main__':
 
         print(e, 'training time:', t1 - t0)
 
-        run_n_test(model, validation_env, 5, render)
+    run_n_test(model, validation_env, 3, False)

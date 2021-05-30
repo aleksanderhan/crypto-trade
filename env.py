@@ -6,6 +6,7 @@ import requests
 import json
 import random
 from collections import deque
+from empyrical import sortino_ratio, calmar_ratio, omega_ratio
 
 from visualize import TradingGraph
 
@@ -17,7 +18,7 @@ class CryptoTradingEnv(gym.Env):
     """A crypto trading environment for OpenAI gym"""
     metadata = {'render.modes': ['console', 'human']}
 
-    def __init__(self, frame_size, max_initial_balance, df, coins, fee=0.005, debug=False):
+    def __init__(self, frame_size, max_initial_balance, df, coins, reward_func, fee=0.005, debug=False):
         super(CryptoTradingEnv, self).__init__()
         self.frame_size = frame_size
         self.max_initial_balance = max_initial_balance
@@ -35,6 +36,7 @@ class CryptoTradingEnv(gym.Env):
         self.training = True
         self.trades = []
         self.debug = debug
+        self.reward_func = reward_func
 
         # Buy/sell/hold for each coin
         self.action_space = spaces.Box(low=np.array([-1, -1, -1], dtype=np.float16), high=np.array([1, 1, 1], dtype=np.float16), dtype=np.float16)
@@ -57,7 +59,7 @@ class CryptoTradingEnv(gym.Env):
         #profit = self.get_profit()
 
         obs = self._next_observation()
-        reward = self.net_worth[-1] - self.net_worth[-2]
+        reward = self._get_reward(self.reward_func)
         done = self.net_worth[-1] <= 0 or self.current_step >= self.max_steps
 
         return obs, reward, done, {
@@ -85,6 +87,21 @@ class CryptoTradingEnv(gym.Env):
             self.net_worth.append(self.initial_balance)
 
         return self._next_observation()
+
+
+    def _get_reward(self, reward_func=None):        
+        returns = np.diff(self.net_worth)
+
+        if reward_func == 'sortino':
+            reward = sortino_ratio(returns)
+        elif reward_func == 'calmar':
+            reward = calmar_ratio(returns)
+        elif reward_func == 'omega':
+            reward = omega_ratio(returns)
+        else:
+            reward = np.mean(returns)
+
+        return reward if abs(reward) != np.inf and not np.isnan(reward) else 0
 
 
     def _take_action(self, action):
