@@ -2,6 +2,7 @@ import os, sys
 import requests
 import pandas as pd
 import numpy as np
+import optuna
 from collections import deque
 
 
@@ -63,7 +64,20 @@ if __name__ == '__main__':
     coins = fname.split('-')[-1].split(',')
 
     data = get_data(start_time, end_time, coins, granularity)
-    max_steps = len(data.index) - frame_size
+
+    study = optuna.load_study(study_name='optimize_profit', storage='sqlite:///params.db')
+    params = study.best_trial.params
+    print(params)
+
+    frame_size = params['frame_size']
+    model_params = {
+        'n_steps': int(params['n_steps']),
+        'gamma': params['gamma'],
+        'learning_rate': params['learning_rate'],
+        'ent_coef': params['ent_coef'],
+        'clip_range': params['clip_range'],
+        'clip_range_vf': params['clip_range_vf']
+    }
 
 
     env = CryptoTradingEnv(frame_size, initial_balance, data, coins, reward_func, debug=False)
@@ -71,7 +85,9 @@ if __name__ == '__main__':
     env = make_vec_env(lambda: env, n_envs=1, vec_env_cls=DummyVecEnv)
 
 
-    model = PPO(policy, env, verbose=1)
+
+
+    model = PPO(policy, env, **model_params)
     
 
     #print('Untrained:')

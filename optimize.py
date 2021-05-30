@@ -22,7 +22,7 @@ def get_data(start_time, end_time, coins, granularity):
 
 
 coins = ['btc']
-start_time = '2020-01-01T00:00'
+start_time = '2021-01-01T00:00'
 end_time = '2021-05-20T00:00'
 training_split = 0.8
 max_initial_balance = 50000
@@ -31,9 +31,9 @@ reward_func = 'sortino'
 df = get_data(start_time, end_time, coins, 60)
 
 
-def optimize(n_trials = 5000, n_jobs = 4):
+def optimize(n_trials=5000):
     study = optuna.create_study(study_name='optimize_profit', storage='sqlite:///params.db', load_if_exists=True)
-    study.optimize(objective_fn, n_trials=n_trials, n_jobs=n_jobs)
+    study.optimize(objective_fn, n_trials=n_trials)
 
 
 def objective_fn(trial):

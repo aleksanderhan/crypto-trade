@@ -3,6 +3,7 @@ import gym
 import requests
 import pandas as pd
 import random
+import optuna
 from time import perf_counter
 
 from stable_baselines3 import PPO, A2C
@@ -31,7 +32,6 @@ policy='MlpPolicy'
 granularity = 60
 start_time = '2021-01-01T00:00'
 end_time = '2021-05-20T00:00'
-frame_size = 24*60 # 1 day
 epochs = 20
 episodes = 1000
 max_initial_balance = 50000
@@ -40,8 +40,23 @@ reward_func = 'sortino' # sortino, calmar, omega
 
 
 
-if __name__ == '__main__':
 
+
+if __name__ == '__main__':
+    study = optuna.load_study(study_name='optimize_profit', storage='sqlite:///params.db')
+    params = study.best_trial.params
+    print(params)
+
+    frame_size = params['frame_size']
+    model_params = {
+        'n_steps': int(params['n_steps']),
+        'gamma': params['gamma'],
+        'learning_rate': params['learning_rate'],
+        'ent_coef': params['ent_coef'],
+        'clip_range': params['clip_range'],
+        'clip_range_vf': params['clip_range_vf']
+    }
+    
     df = get_data(start_time, end_time, coins, granularity)
 
     slice_point = int(len(df.index) * training_split)
@@ -75,7 +90,8 @@ if __name__ == '__main__':
                     verbose=0, 
                     n_epochs=epochs,
                     device='cpu',
-                    tensorboard_log='./tensorboard/')
+                    tensorboard_log='./tensorboard/',
+                    **model_params)
 
         model_name = model.__class__.__name__
         fname = f'{model_name}-{policy}-{reward_func}-fs{frame_size}-g{granularity}-{coins_str}'

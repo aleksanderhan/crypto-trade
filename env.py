@@ -25,7 +25,7 @@ class CryptoTradingEnv(gym.Env):
         self.initial_balance = random.randint(1000, max_initial_balance)
         self.df = df
         self.coins = coins
-        self.max_steps = len(df.index) - frame_size
+        self.max_steps = len(df.index) - frame_size # -1 ?
         self.fee = fee
         self.visualization = None
         self.current_step = frame_size

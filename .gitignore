@@ -130,4 +130,5 @@ dmypy.json
 
 
 *.zip
+*.db
 tensorboard/
