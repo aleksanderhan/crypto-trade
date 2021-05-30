@@ -47,14 +47,14 @@ def run_n_test(model, env, n, render=False):
 
 
 
-coins = ['btc', 'eth', 'ada', 'link', 'algo', 'nmr', 'xlm']
-granularity=60
 start_time = '2021-05-25T00:00'
 end_time = '2021-05-28T00:00'
-frame_size = 50
 initial_balance = 10000
 fname = 'PPO-MlpPolicy-fs50-g60-btc,eth,ada,link,algo,nmr,xlm'
 policy = fname.split('-')[1]
+frame_size = int(fname.split('-')[2].strip('fs'))
+granularity = int(fname.split('-')[3].strip('g'))
+coins = fname.split('-')[-1].split(',')
 episodes = 3
 render = True
 

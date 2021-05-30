@@ -91,4 +91,4 @@ if __name__ == '__main__':
 
         print(e, 'training time:', t1 - t0)
 
-        run_n_test(model, validation_env, episodes, render)
+        run_n_test(model, validation_env, 5, render)
