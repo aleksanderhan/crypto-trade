@@ -3,7 +3,7 @@ import optuna
 import pandas as pd
 
 
-DEFAULT_FRAME_SIZE = 5
+DEFAULT_FRAME_SIZE = 100
 
 
 

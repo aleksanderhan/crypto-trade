@@ -12,7 +12,7 @@ from stable_baselines3.common.evaluation import evaluate_policy
 from stable_baselines3.common.env_checker import check_env
 
 from env import CryptoTradingEnv
-from lib import get_data
+from lib import get_data, load_params
 
 
 def test_model(model, env, render):
@@ -40,7 +40,7 @@ def run_n_test(model, env, n, render=False):
 
 start_time = '2021-05-25T00:00'
 end_time = '2021-05-28T00:00'
-initial_balance = 10000
+max_initial_balance = 10000
 episodes = 3
 render = True
 
@@ -55,27 +55,13 @@ if __name__ == '__main__':
 
     data = get_data(start_time, end_time, coins, granularity)
 
-    study = optuna.load_study(study_name='optimize_profit', storage='sqlite:///params.db')
-    params = study.best_trial.params
-    print(params)
-
-    frame_size = params['frame_size']
-    model_params = {
-        'n_steps': int(params['n_steps']),
-        'gamma': params['gamma'],
-        'learning_rate': params['learning_rate'],
-        'ent_coef': params['ent_coef'],
-        'clip_range': params['clip_range'],
-        'clip_range_vf': params['clip_range_vf']
-    }
+    env_params, model_params = load_params()
 
 
-    env = CryptoTradingEnv(frame_size, initial_balance, data, coins, reward_func, debug=False)
+    env = CryptoTradingEnv(max_initial_balance, data, coins, reward_func, **env_params)
     #check_env(env)
     env = make_vec_env(lambda: env, n_envs=1, vec_env_cls=DummyVecEnv)
-
-
-
+    
 
     model = PPO(policy, env, **model_params)
     

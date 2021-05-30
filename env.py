@@ -18,7 +18,7 @@ class CryptoTradingEnv(gym.Env):
     """A crypto trading environment for OpenAI gym"""
     metadata = {'render.modes': ['console', 'human']}
 
-    def __init__(self, max_initial_balance, df, coins, reward_func, frame_size=50, fee=0.005, debug=False):
+    def __init__(self, max_initial_balance, df, coins, reward_func, frame_size=50, fee=0.005):
         super(CryptoTradingEnv, self).__init__()
         self.frame_size = frame_size
         self.max_initial_balance = max_initial_balance
@@ -35,7 +35,6 @@ class CryptoTradingEnv(gym.Env):
         self.net_worth = deque(maxlen=frame_size)
         self.training = True
         self.trades = []
-        self.debug = debug
         self.reward_func = reward_func
 
         # Buy/sell/hold for each coin

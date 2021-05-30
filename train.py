@@ -45,8 +45,8 @@ if __name__ == '__main__':
 
     validation_env = make_vec_env(
         lambda: test_env, 
-        n_envs=16,
-        vec_env_cls=SubprocVecEnv
+        n_envs=1,
+        vec_env_cls=DummyVecEnv
     )
 
     for e in range(episodes):
@@ -79,7 +79,7 @@ if __name__ == '__main__':
 
         t0 = perf_counter()
         for _ in range(3):
-            model.learn(total_timesteps=len(episode_df.index))
+            model.learn(total_timesteps=len(episode_df.index) - frame_size)
         t1 = perf_counter()
         
         model.save(fname)
