@@ -80,8 +80,8 @@ def initialize_envs(frame_size):
     train_df.reset_index(drop=True, inplace=True)
     test_df.reset_index(drop=True, inplace=True)
 
-    train_env = CryptoTradingEnv(frame_size, max_initial_balance, train_df, coins, reward_func)
-    validation_env = CryptoTradingEnv(frame_size, max_initial_balance, test_df, coins, reward_func)
+    train_env = CryptoTradingEnv(max_initial_balance, train_df, coins, reward_func, frame_size)
+    validation_env = CryptoTradingEnv(max_initial_balance, test_df, coins, reward_func, frame_size)
 
     return train_env, validation_env
 
