@@ -41,7 +41,7 @@ def objective_fn(trial):
     agent_params = optimize_ppo(trial)
 
     train_env, validation_env = initialize_envs(**env_params)
-    model = PPO('MlpPolicy', train_env, **agent_params)
+    model = PPO('MlpPolicy', train_env, device='cpu', **agent_params)
     
     model.learn(len(train_env.df))
     
@@ -51,7 +51,7 @@ def objective_fn(trial):
     for i in range(len(validation_env.df)):
         action, _ = model.predict(obs)
         obs, reward, done, _ = validation_env.step(action)
-        rewards += reward
+        rewards.append(reward)
     
     return -np.mean(rewards)
 

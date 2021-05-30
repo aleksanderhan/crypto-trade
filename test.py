@@ -5,7 +5,6 @@ import numpy as np
 import optuna
 from collections import deque
 
-
 from stable_baselines3 import PPO
 from stable_baselines3.common.env_util import make_vec_env
 from stable_baselines3.common.vec_env import SubprocVecEnv, DummyVecEnv
@@ -13,16 +12,7 @@ from stable_baselines3.common.evaluation import evaluate_policy
 from stable_baselines3.common.env_checker import check_env
 
 from env import CryptoTradingEnv
-
-
-def get_data(start_time, end_time, coins, granularity):
-    coinsStr = ','.join(coins)
-    r = requests.get(f'http://127.0.0.1:5000/data?start_time={start_time}&end_time={end_time}&coins={coinsStr}&granularity={granularity}')
-
-    df = pd.DataFrame.from_dict(r.json())
-    print(df)
-    df.index = df.index.astype(int)
-    return df
+from lib import get_data
 
 
 def test_model(model, env, render):

@@ -1,9 +1,7 @@
 import os.path
 import gym
-import requests
 import pandas as pd
 import random
-import optuna
 from time import perf_counter
 
 from stable_baselines3 import PPO, A2C
@@ -14,16 +12,9 @@ from stable_baselines3.common.env_checker import check_env
 
 from env import CryptoTradingEnv
 from test import run_n_test
+from lib import get_data, load_params
 
 
-def get_data(start_time, end_time, coins, granularity):
-    coinsStr = ','.join(coins)
-    r = requests.get(f'http://127.0.0.1:5000/data?start_time={start_time}&end_time={end_time}&coins={coinsStr}&granularity={granularity}')
-
-    df = pd.DataFrame.from_dict(r.json())
-    print(df)
-    df.index = df.index.astype(int)
-    return df
 
 
 coins = ['btc'] #, 'eth', 'ada', 'link', 'algo', 'nmr', 'xlm'] # 'FIL', 'STORJ', 'AAVE', 'COMP', 'LTC', 
@@ -35,28 +26,13 @@ end_time = '2021-05-20T00:00'
 epochs = 20
 episodes = 1000
 max_initial_balance = 50000
-training_split = 0.98
+training_split = 0.9
 reward_func = 'sortino' # sortino, calmar, omega
 
 
 
-
-
 if __name__ == '__main__':
-    study = optuna.load_study(study_name='optimize_profit', storage='sqlite:///params.db')
-    params = study.best_trial.params
-    print(params)
-
-    frame_size = params['frame_size']
-    model_params = {
-        'n_steps': int(params['n_steps']),
-        'gamma': params['gamma'],
-        'learning_rate': params['learning_rate'],
-        'ent_coef': params['ent_coef'],
-        'clip_range': params['clip_range'],
-        'clip_range_vf': params['clip_range_vf']
-    }
-    
+    env_params, model_params = load_params()
     df = get_data(start_time, end_time, coins, granularity)
 
     slice_point = int(len(df.index) * training_split)
@@ -64,7 +40,7 @@ if __name__ == '__main__':
     test_df = df[slice_point:]
     test_df.reset_index(drop=True, inplace=True)
 
-    test_env = CryptoTradingEnv(frame_size, max_initial_balance, test_df, coins, reward_func)
+    test_env = CryptoTradingEnv(max_initial_balance, test_df, coins, reward_func, **env_params)
     #check_env(test_env)
 
     validation_env = make_vec_env(
@@ -80,20 +56,21 @@ if __name__ == '__main__':
         episode_df.reset_index(drop=True, inplace=True)
 
         train_env = make_vec_env(
-            lambda: CryptoTradingEnv(frame_size, max_initial_balance, episode_df, coins, reward_func), 
-            n_envs=16, 
-            vec_env_cls=SubprocVecEnv
+            lambda: CryptoTradingEnv(max_initial_balance, episode_df, coins, reward_func, **env_params), 
+            n_envs=1, 
+            vec_env_cls=DummyVecEnv
         )
 
         model = PPO(policy, 
                     train_env, 
-                    verbose=0, 
+                    verbose=1, 
                     n_epochs=epochs,
                     device='cpu',
                     tensorboard_log='./tensorboard/',
                     **model_params)
 
         model_name = model.__class__.__name__
+        frame_size = env_params['frame_size']
         fname = f'{model_name}-{policy}-{reward_func}-fs{frame_size}-g{granularity}-{coins_str}'
         
         if os.path.isfile(fname + '.zip'):

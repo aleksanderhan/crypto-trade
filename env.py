@@ -11,21 +11,21 @@ from empyrical import sortino_ratio, calmar_ratio, omega_ratio
 from visualize import TradingGraph
 
 LOOKBACK_WINDOW_SIZE = 100
-MAX_VALUE = 3.4e38 # Max float 32
+MAX_VALUE = np.inf #3.4e38 # Max float 32
 
 
 class CryptoTradingEnv(gym.Env):
     """A crypto trading environment for OpenAI gym"""
     metadata = {'render.modes': ['console', 'human']}
 
-    def __init__(self, frame_size, max_initial_balance, df, coins, reward_func, fee=0.005, debug=False):
+    def __init__(self, max_initial_balance, df, coins, reward_func, frame_size=50, fee=0.005, debug=False):
         super(CryptoTradingEnv, self).__init__()
         self.frame_size = frame_size
         self.max_initial_balance = max_initial_balance
         self.initial_balance = random.randint(1000, max_initial_balance)
         self.df = df
         self.coins = coins
-        self.max_steps = len(df.index) - frame_size # -1 ?
+        self.max_steps = len(df.index) - frame_size
         self.fee = fee
         self.visualization = None
         self.current_step = frame_size
@@ -101,7 +101,7 @@ class CryptoTradingEnv(gym.Env):
         else:
             reward = np.mean(returns)
 
-        return reward if abs(reward) != np.inf and not np.isnan(reward) else 0
+        return reward if not np.isinf(reward) and not np.isnan(reward) else 0
 
 
     def _take_action(self, action):
@@ -169,20 +169,20 @@ class CryptoTradingEnv(gym.Env):
             close_values = self.df.loc[self.current_step - self.frame_size +1: self.current_step, coin + '_close'].values
             volume_values = self.df.loc[self.current_step - self.frame_size +1: self.current_step, coin + '_volume'].values
 
-            frame = np.concatenate((frame, np.array([open_values[i] - open_values[i-1] for i in range(1, len(open_values))])))
-            frame = np.concatenate((frame, np.array([high_values[i]- high_values[i-1] for i in range(1, len(high_values))])))
-            frame = np.concatenate((frame, np.array([low_values[i] - low_values[i-1] for i in range(1, len(low_values))])))
-            frame = np.concatenate((frame, np.array([close_values[i] - close_values[i-1] for i in range(1, len(close_values))])))
-            frame = np.concatenate((frame, np.array([volume_values[i] - volume_values[i-1] for i in range(1, len(volume_values))])))
+            frame = np.concatenate((frame, np.diff(np.log(open_values))))
+            frame = np.concatenate((frame, np.diff(np.log(high_values))))
+            frame = np.concatenate((frame, np.diff(np.log(low_values))))
+            frame = np.concatenate((frame, np.diff(np.log(close_values))))
+            frame = np.concatenate((frame, np.diff(np.log(volume_values))))
 
-            frame = np.concatenate((frame, np.array([self.portfolio[coin][i] - self.portfolio[coin][i-1] for i in range(1, len(self.portfolio[coin]))])))
+            frame = np.concatenate((frame, np.diff(np.log(self.portfolio[coin]))))
 
         timestamp_values = self.df.loc[self.current_step - self.frame_size +1: self.current_step, 'timestamp'].values
-        frame = np.concatenate((frame, np.array([timestamp_values[i] - timestamp_values[i-1] for i in range(1, len(timestamp_values))])))
+        frame = np.concatenate((frame, np.diff(np.log(timestamp_values))))
 
-        frame = np.concatenate((frame, np.array([self.balance[i] - self.balance[i-1] for i in range(1, len(self.balance))])))
-        frame = np.concatenate((frame, np.array([self.net_worth[i] - self.net_worth[i-1] for i in range(1, len(self.net_worth))])))
-        return frame
+        frame = np.concatenate((frame, np.diff(np.log(self.balance))))
+        frame = np.concatenate((frame, np.diff(np.log(self.net_worth))))
+        return np.nan_to_num(frame)
 
 
     def _calculate_net_worth(self):
