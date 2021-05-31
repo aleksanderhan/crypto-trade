@@ -68,7 +68,7 @@ def optimize_ppo(trial):
 
 def optimize_envs(trial):
     return {
-        'frame_size': int(trial.suggest_uniform('frame_size', 10, 2000)),
+        'frame_size': int(trial.suggest_loguniform('frame_size', 10, 2000)),
     }
 
 

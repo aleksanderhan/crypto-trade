@@ -11,7 +11,7 @@ from empyrical import sortino_ratio, calmar_ratio, omega_ratio
 from visualize import TradingGraph
 
 LOOKBACK_WINDOW_SIZE = 100
-MAX_VALUE = np.inf #3.4e38 # Max float 32
+MAX_VALUE = 3.4e38 # Max float 32
 
 
 class CryptoTradingEnv(gym.Env):
@@ -97,6 +97,9 @@ class CryptoTradingEnv(gym.Env):
             reward = calmar_ratio(returns)
         elif reward_func == 'omega':
             reward = omega_ratio(returns)
+        elif reward_func == 'custom':
+            reward = np.average(
+                [sortino_ratio(returns), calmar_ratio(returns), omega_ratio(returns)], [self.sr_weight, self.cr_weight, self.or_weight])
         else:
             reward = np.mean(returns)
 
