@@ -39,10 +39,14 @@ def objective_fn(trial):
                 device='cpu',
                 **model_params)
 
-    
-    model.learn(len(train_env.get_attr('df')[0].index) - env_params['frame_size'])
+    train_df = train_env.get_attr('df')[0]
+    model.learn(len(train_df.index) - env_params['frame_size'])
     
     rewards, done = [], False
+
+    trades = train_env.get_attr('trades')[0]
+    if len(trades) < 1:
+        raise optuna.structs.TrialPruned()
 
     obs = validation_env.reset()
     for i in range(len(validation_env.get_attr('df')[0].index)):
@@ -79,8 +83,8 @@ def initialize_envs(env_params):
     train_df.reset_index(drop=True, inplace=True)
     test_df.reset_index(drop=True, inplace=True)
 
-    train_env = DummyVecEnv([lambda: CryptoTradingEnv(max_initial_balance, train_df, coins, reward_func, **env_params)])
-    validation_env = DummyVecEnv([lambda: CryptoTradingEnv(max_initial_balance, test_df, coins, reward_func, **env_params)])
+    train_env = DummyVecEnv([lambda: CryptoTradingEnv(train_df, coins, max_initial_balance, reward_func, **env_params)])
+    validation_env = DummyVecEnv([lambda: CryptoTradingEnv(test_df, coins, max_initial_balance, reward_func, **env_params)])
 
     return train_env, validation_env
 

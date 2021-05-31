@@ -58,10 +58,10 @@ if __name__ == '__main__':
     env_params, model_params = load_params()
 
 
-    env = CryptoTradingEnv(max_initial_balance, data, coins, reward_func, **env_params)
+    env = CryptoTradingEnv(data, coins, max_initial_balance, reward_func, **env_params)
     #check_env(env)
     env = make_vec_env(lambda: env, n_envs=1, vec_env_cls=DummyVecEnv)
-    
+
 
     model = PPO(policy, env, **model_params)
     

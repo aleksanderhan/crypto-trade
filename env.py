@@ -11,15 +11,23 @@ from empyrical import sortino_ratio, calmar_ratio, omega_ratio
 from visualize import TradingGraph
 
 LOOKBACK_WINDOW_SIZE = 100
-MAX_VALUE = 3.4e38 # Max float 32
+MAX_VALUE = 3.4e38 # ~Max float 32
 
 
 class CryptoTradingEnv(gym.Env):
     """A crypto trading environment for OpenAI gym"""
     metadata = {'render.modes': ['console', 'human']}
 
-    def __init__(self, max_initial_balance, df, coins, reward_func, frame_size=50, fee=0.005):
+    def __init__(self, 
+                df, 
+                coins, 
+                max_initial_balance, 
+                reward_func, 
+                frame_size=50, 
+                fee=0.005):
+        
         super(CryptoTradingEnv, self).__init__()
+
         self.frame_size = frame_size
         self.max_initial_balance = max_initial_balance
         self.initial_balance = random.randint(1000, max_initial_balance)
@@ -99,7 +107,7 @@ class CryptoTradingEnv(gym.Env):
             reward = omega_ratio(returns)
         elif reward_func == 'custom':
             reward = np.average(
-                [sortino_ratio(returns), calmar_ratio(returns), omega_ratio(returns)], [self.sr_weight, self.cr_weight, self.or_weight])
+                [sortino_ratio(returns), calmar_ratio(returns), omega_ratio(returns)], [1, 1, 1])
         else:
             reward = np.mean(returns)
 
@@ -184,7 +192,7 @@ class CryptoTradingEnv(gym.Env):
 
         frame = np.concatenate((frame, np.diff(self.balance)))
         frame = np.concatenate((frame, np.diff(self.net_worth)))
-        return np.nan_to_num(frame)
+        return np.nan_to_num(frame, posinf=MAX_VALUE, neginf=-MAX_VALUE)
 
 
     def _calculate_net_worth(self):

@@ -40,7 +40,7 @@ if __name__ == '__main__':
     test_df = df[slice_point:]
     test_df.reset_index(drop=True, inplace=True)
 
-    test_env = CryptoTradingEnv(max_initial_balance, test_df, coins, reward_func, **env_params)
+    test_env = CryptoTradingEnv(test_df, coins, max_initial_balance, reward_func, **env_params)
     #check_env(test_env)
 
     validation_env = make_vec_env(
@@ -56,14 +56,14 @@ if __name__ == '__main__':
         episode_df.reset_index(drop=True, inplace=True)
 
         train_env = make_vec_env(
-            lambda: CryptoTradingEnv(max_initial_balance, episode_df, coins, reward_func, **env_params), 
+            lambda: CryptoTradingEnv(episode_df, coins, max_initial_balance, reward_func, **env_params), 
             n_envs=16,
             vec_env_cls=SubprocVecEnv
         )
 
         model = PPO(policy, 
                     train_env, 
-                    verbose=1, 
+                    verbose=0, 
                     n_epochs=epochs,
                     device='cpu',
                     tensorboard_log='./tensorboard/',
