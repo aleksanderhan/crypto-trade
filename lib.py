@@ -23,7 +23,7 @@ def load_params():
     try:
         params = study.best_trial.params
         print(params)
-        env_params = {'frame_size': params['frame_size']}
+        env_params = {'frame_size': int(params['frame_size'])}
         model_params = {
             'n_steps': int(params['n_steps']),
             'gamma': params['gamma'],

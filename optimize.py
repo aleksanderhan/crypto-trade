@@ -13,7 +13,7 @@ from lib import get_data
 
 
 coins = ['btc']
-start_time = '2021-01-01T00:00'
+start_time = '2021-05-01T00:00'
 end_time = '2021-05-20T00:00'
 training_split = 0.8
 max_initial_balance = 50000
