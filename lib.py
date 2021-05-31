@@ -32,7 +32,7 @@ def load_params():
         }
     except ValueError:
         env_params = {'frame_size': 25}, {}
-    	model_params = {
+        model_params = {
             'n_steps': 215,
             'gamma': 0.9287084025015536,
             'learning_rate': 0.014929699035787503,

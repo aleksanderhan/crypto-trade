@@ -7,7 +7,6 @@ from stable_baselines3 import PPO
 from stable_baselines3.common.env_util import make_vec_env
 from stable_baselines3.common.vec_env import DummyVecEnv
 
-
 from env import CryptoTradingEnv
 from lib import get_data
 
@@ -37,11 +36,12 @@ def objective_fn(trial):
     model = PPO('MlpPolicy',
                 train_env, 
                 device='cpu',
+                batch_size=model_params['n_steps'], # https://github.com/DLR-RM/stable-baselines3/issues/440
                 **model_params)
 
     train_df = train_env.get_attr('df')[0]
     model.learn(len(train_df.index) - env_params['frame_size'])
-    
+
     rewards, done = [], False
 
     trades = train_env.get_attr('trades')[0]
@@ -52,29 +52,27 @@ def objective_fn(trial):
     for i in range(len(validation_env.get_attr('df')[0].index)):
         action, _states = model.predict(obs)
         obs, reward, done, _ = validation_env.step(action)
-        print(reward)
         rewards.append(reward)
         if done:
             break
 
-    #print(rewards)
     return -np.mean(rewards)
 
 
 def optimize_ppo(trial):
     return {
-        'n_steps': int(trial.suggest_loguniform('n_steps', 16, 2048)),
+        'n_steps': int(trial.suggest_uniform('n_steps', 16, 2048)),
         'gamma': trial.suggest_loguniform('gamma', 0.9, 0.9999),
         'learning_rate': trial.suggest_loguniform('learning_rate', 1e-5, 1.),
         'ent_coef': trial.suggest_loguniform('ent_coef', 1e-8, 1e-1),
         'clip_range': trial.suggest_loguniform('clip_range', 0.1, 0.4),
-        'clip_range_vf': trial.suggest_loguniform('clip_range_vf', 0.1, 1.)
+        'clip_range_vf': trial.suggest_loguniform('clip_range_vf', 0.1, .4)
     }
 
 
 def optimize_envs(trial):
     return {
-        'frame_size': int(trial.suggest_loguniform('frame_size', 10, 2000)),
+        'frame_size': int(trial.suggest_uniform('frame_size', 10, 2000)),
     }
 
 

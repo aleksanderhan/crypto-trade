@@ -11,7 +11,7 @@ from empyrical import sortino_ratio, calmar_ratio, omega_ratio
 from visualize import TradingGraph
 
 LOOKBACK_WINDOW_SIZE = 100
-MAX_VALUE = 1.7976931348623157e308 #3.4e38 # ~Max float 32
+MAX_VALUE = 3.4e38 # ~Max float 32
 
 
 class CryptoTradingEnv(gym.Env):
@@ -221,9 +221,9 @@ class CryptoTradingEnv(gym.Env):
         profit = self.get_profit()        
         
         if mode == 'console':
-            print(f'Last_trade: {self._get_last_trade()}')
             for coin in self.coins:
                 print(coin, self.portfolio[coin][-1])
+            print(f'Last_trade: {self._get_last_trade()}')
             print(f'Step: {self.current_step} of {self.max_steps}')
             print(f'Balance: {self.balance[-1]} (Initial balance: {self.initial_balance})')
             print(f'Net worth: {self.net_worth[-1]} (Max net worth: {self.max_net_worth})')
