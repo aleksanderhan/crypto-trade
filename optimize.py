@@ -12,11 +12,11 @@ from lib import get_data
 
 
 coins = ['btc', 'eth']
-start_time = '2021-05-01T00:00'
-end_time = '2021-05-20T00:00'
+start_time = '2021-03-01T00:00'
+end_time = '2021-05-01T00:00'
 training_split = 0.8
 max_initial_balance = 50000
-reward_func = 'sortino'
+reward_func = 'simple'
 
 
 df = get_data(start_time, end_time, coins, 60)

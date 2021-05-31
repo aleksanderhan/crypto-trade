@@ -27,7 +27,7 @@ epochs = 20
 episodes = 1000
 max_initial_balance = 50000
 training_split = 0.9
-reward_func = 'sortino' # sortino, calmar, omega, simple, custom
+reward_func = 'simple' # sortino, calmar, omega, simple, custom
 
 
 

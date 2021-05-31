@@ -100,7 +100,7 @@ class CryptoTradingEnv(gym.Env):
         returns = np.diff(self.net_worth)
 
         if reward_func == 'simple':
-            reward = returns[-1]
+            reward = np.mean(returns)
         elif reward_func == 'sortino':
             reward = sortino_ratio(returns)
         elif reward_func == 'calmar':
@@ -111,7 +111,7 @@ class CryptoTradingEnv(gym.Env):
             reward = np.average(
                 [sortino_ratio(returns), calmar_ratio(returns), omega_ratio(returns)], [1, 1, 1])
         else:
-            reward = np.mean(returns)
+            reward = returns[-1]
 
         return reward if not np.isinf(reward) and not np.isnan(reward) else 0
 
@@ -181,19 +181,19 @@ class CryptoTradingEnv(gym.Env):
             close_values = self.df.loc[self.current_step - self.frame_size +1: self.current_step, coin + '_close'].values
             volume_values = self.df.loc[self.current_step - self.frame_size +1: self.current_step, coin + '_volume'].values
 
-            frame = np.concatenate((frame, np.diff(open_values)))
-            frame = np.concatenate((frame, np.diff(high_values)))
-            frame = np.concatenate((frame, np.diff(low_values)))
-            frame = np.concatenate((frame, np.diff(close_values)))
-            frame = np.concatenate((frame, np.diff(volume_values)))
+            frame = np.concatenate((frame, np.diff(np.log(open_values))))
+            frame = np.concatenate((frame, np.diff(np.log(high_values))))
+            frame = np.concatenate((frame, np.diff(np.log(low_values))))
+            frame = np.concatenate((frame, np.diff(np.log(close_values))))
+            frame = np.concatenate((frame, np.diff(np.log(volume_values))))
 
-            frame = np.concatenate((frame, np.diff(self.portfolio[coin])))
+            frame = np.concatenate((frame, np.diff(np.log(self.portfolio[coin]))))
 
         timestamp_values = self.df.loc[self.current_step - self.frame_size +1: self.current_step, 'timestamp'].values
-        frame = np.concatenate((frame, np.diff(timestamp_values)))
+        frame = np.concatenate((frame, np.diff(np.log(timestamp_values))))
 
-        frame = np.concatenate((frame, np.diff(self.balance)))
-        frame = np.concatenate((frame, np.diff(self.net_worth)))
+        frame = np.concatenate((frame, np.diff(np.log(self.balance))))
+        frame = np.concatenate((frame, np.diff(np.log(self.net_worth))))
         return np.nan_to_num(frame, posinf=MAX_VALUE, neginf=-MAX_VALUE)
 
 
