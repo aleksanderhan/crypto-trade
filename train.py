@@ -17,7 +17,7 @@ from lib import get_data, load_params
 
 
 
-coins = ['btc'] #, 'eth', 'ada', 'link', 'algo', 'nmr', 'xlm'] # 'FIL', 'STORJ', 'AAVE', 'COMP', 'LTC', 
+coins = ['btc', 'eth'] #, 'ada', 'link', 'algo', 'nmr', 'xlm'] # 'FIL', 'STORJ', 'AAVE', 'COMP', 'LTC', 
 coins_str = ','.join(coins)
 policy='MlpPolicy'
 granularity = 60
@@ -27,7 +27,7 @@ epochs = 20
 episodes = 1000
 max_initial_balance = 50000
 training_split = 0.9
-reward_func = 'sortino' # sortino, calmar, omega
+reward_func = 'simple' # sortino, calmar, omega, simple, custom
 
 
 

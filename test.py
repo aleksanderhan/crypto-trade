@@ -38,7 +38,7 @@ def run_n_test(model, env, n, render=False):
 
 
 
-start_time = '2021-05-25T00:00'
+start_time = '2021-05-20T00:00'
 end_time = '2021-05-28T00:00'
 max_initial_balance = 10000
 episodes = 3
@@ -55,10 +55,10 @@ if __name__ == '__main__':
 
     data = get_data(start_time, end_time, coins, granularity)
 
-    env_params, model_params = load_params()
+    _, model_params = load_params()
 
 
-    env = CryptoTradingEnv(data, coins, max_initial_balance, reward_func, **env_params)
+    env = CryptoTradingEnv(data, coins, max_initial_balance, reward_func, frame_size)
     #check_env(env)
     env = make_vec_env(lambda: env, n_envs=1, vec_env_cls=DummyVecEnv)
 

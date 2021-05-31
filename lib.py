@@ -3,8 +3,6 @@ import optuna
 import pandas as pd
 
 
-DEFAULT_FRAME_SIZE = 100
-
 
 
 def get_data(start_time, end_time, coins, granularity):
@@ -32,7 +30,15 @@ def load_params():
             'clip_range': params['clip_range'],
             'clip_range_vf': params['clip_range_vf']
         }
-
-        return env_params, model_params
     except ValueError:
-        return {'frame_size': DEFAULT_FRAME_SIZE}, {}
+        env_params = {'frame_size': 25}, {}
+    	model_params = {
+            'n_steps': 215,
+            'gamma': 0.9287084025015536,
+            'learning_rate': 0.014929699035787503,
+            'ent_coef': 0.00043960436532134166,
+            'clip_range': 0.12840973632198896,
+            'clip_range_vf': 0.34228823879560166
+        }
+
+    return env_params, model_params

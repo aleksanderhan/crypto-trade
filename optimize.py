@@ -12,7 +12,7 @@ from env import CryptoTradingEnv
 from lib import get_data
 
 
-coins = ['btc']
+coins = ['btc', 'eth']
 start_time = '2021-05-01T00:00'
 end_time = '2021-05-20T00:00'
 training_split = 0.8
@@ -52,10 +52,12 @@ def objective_fn(trial):
     for i in range(len(validation_env.get_attr('df')[0].index)):
         action, _states = model.predict(obs)
         obs, reward, done, _ = validation_env.step(action)
+        print(reward)
         rewards.append(reward)
         if done:
             break
 
+    #print(rewards)
     return -np.mean(rewards)
 
 
@@ -65,8 +67,8 @@ def optimize_ppo(trial):
         'gamma': trial.suggest_loguniform('gamma', 0.9, 0.9999),
         'learning_rate': trial.suggest_loguniform('learning_rate', 1e-5, 1.),
         'ent_coef': trial.suggest_loguniform('ent_coef', 1e-8, 1e-1),
-        'clip_range': trial.suggest_uniform('clip_range', 0.1, 0.4),
-        'clip_range_vf': trial.suggest_uniform('clip_range_vf', 0., 1.)
+        'clip_range': trial.suggest_loguniform('clip_range', 0.1, 0.4),
+        'clip_range_vf': trial.suggest_loguniform('clip_range_vf', 0.1, 1.)
     }
 
 

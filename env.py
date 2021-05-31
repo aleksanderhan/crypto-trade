@@ -11,7 +11,7 @@ from empyrical import sortino_ratio, calmar_ratio, omega_ratio
 from visualize import TradingGraph
 
 LOOKBACK_WINDOW_SIZE = 100
-MAX_VALUE = 3.4e38 # ~Max float 32
+MAX_VALUE = 1.7976931348623157e308 #3.4e38 # ~Max float 32
 
 
 class CryptoTradingEnv(gym.Env):
@@ -99,7 +99,9 @@ class CryptoTradingEnv(gym.Env):
     def _get_reward(self, reward_func=None):        
         returns = np.diff(self.net_worth)
 
-        if reward_func == 'sortino':
+        if reward_func == 'simple':
+            reward = returns[-1]
+        elif reward_func == 'sortino':
             reward = sortino_ratio(returns)
         elif reward_func == 'calmar':
             reward = calmar_ratio(returns)
