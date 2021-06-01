@@ -14,8 +14,6 @@ from test import run_n_test
 from lib import get_data, load_params
 
 
-
-
 coins = ['btc', 'eth'] #, 'ada', 'link', 'algo', 'nmr', 'xlm'] # 'FIL', 'STORJ', 'AAVE', 'COMP', 'LTC', 
 coins_str = ','.join(coins)
 policy = 'MlpLstmPolicy'

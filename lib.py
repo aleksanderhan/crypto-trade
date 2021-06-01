@@ -25,7 +25,8 @@ def load_params():
             'reward_len': int(params['reward_len']),
             'forecast_len': int(params['forecast_len']),
             'lookback_interval': int(params['lookback_interval']),
-            'confidence_interval': params['confidence_interval']
+            'confidence_interval': params['confidence_interval'],
+            'use_sarimax': int(params['use_sarimax'])
         }
         model_params = {
             'n_steps': int(params['n_steps']),
@@ -41,7 +42,8 @@ def load_params():
             'reward_len': 10,
             'forecast_len': 10,
             'lookback_interval': 10,
-            'confidence_interval': 0.8
+            'confidence_interval': 0.8,
+            'use_sarimax': 1
         }
         model_params = {
             'n_steps': 215,

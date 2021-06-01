@@ -35,6 +35,7 @@ class CryptoTradingEnv(gym.Env):
                 forecast_len,
                 lookback_interval,
                 confidence_interval,
+                use_sarimax,
                 fee=0.005):
         
         super(CryptoTradingEnv, self).__init__()
@@ -57,6 +58,7 @@ class CryptoTradingEnv(gym.Env):
         self.forecast_len = forecast_len
         self.lookback_interval = lookback_interval
         self.confidence_interval = confidence_interval
+        self.use_sarimax = use_sarimax
 
         # Buy/sell/hold for each coin
         self.action_space = spaces.Box(low=np.array([-1, -1, -1], dtype=np.float16), high=np.array([1, 1, 1], dtype=np.float32), dtype=np.float32)
@@ -65,7 +67,7 @@ class CryptoTradingEnv(gym.Env):
         self.observation_space = spaces.Box(
             low=-MAX_VALUE,
             high=MAX_VALUE, 
-            shape=((len(coins)*(6 + self.forecast_len*3) + 3),), # (num_coins * (portefolio value & candles & forecast_len*3) + (balance & net worth & timestamp))
+            shape=((len(coins)*(6 + self.forecast_len*3) + 3),) if use_sarimax else ((len(coins)*6 + 3),), # (num_coins * (portefolio value & candles & forecast_len*3) + (balance & net worth & timestamp))
             dtype=np.float32
         )
 
@@ -201,9 +203,10 @@ class CryptoTradingEnv(gym.Env):
             frame = np.concatenate((frame, np.diff(np.log(close_values))))
             frame = np.concatenate((frame, np.diff(np.log(volume_values))))
 
-            forecast = self._get_forecast(coin)
-            frame = np.concatenate((frame, forecast.predicted_mean))
-            frame = np.concatenate((frame, forecast.conf_int().flatten()))
+            if self.use_sarimax:
+                forecast = self._get_forecast(coin)
+                frame = np.concatenate((frame, forecast.predicted_mean))
+                frame = np.concatenate((frame, forecast.conf_int().flatten()))
 
             frame = np.concatenate((frame, np.diff(np.log(self.portfolio[coin]))))
 

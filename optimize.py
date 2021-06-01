@@ -65,8 +65,9 @@ def optimize_env(trial):
         'reward_func': trial.suggest_categorical('reward_func', ['sortino', 'calmar', 'omega', 'simple', 'custom']),
         'reward_len': int(trial.suggest_uniform('reward_len', 2, 200)),
         'forecast_len': int(trial.suggest_uniform('forecast_len', 1, 200)),
-        'lookback_interval': int(trial.suggest_uniform('lookback_interval', 10, 1000))
-        'confidence_interval': trial.suggest_uniform('confidence_interval', 0.7, 0.99)
+        'lookback_interval': int(trial.suggest_uniform('lookback_interval', 10, 1000)),
+        'confidence_interval': trial.suggest_uniform('confidence_interval', 0.7, 0.99),
+        'use_sarimax': trial.suggest_categorical('use_sarimax', [0, 1])
     }
 
 
