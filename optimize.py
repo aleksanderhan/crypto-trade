@@ -63,7 +63,10 @@ def objective_fn(trial):
 def optimize_env(trial):
     return {
         'reward_func': trial.suggest_categorical('reward_func', ['sortino', 'calmar', 'omega', 'simple', 'custom']),
-        'reward_len': int(trial.suggest_uniform('reward_len', 2, 1000))
+        'reward_len': int(trial.suggest_uniform('reward_len', 2, 200)),
+        'forecast_len': int(trial.suggest_uniform('forecast_len', 1, 200)),
+        'lookback_interval': int(trial.suggest_uniform('lookback_interval', 10, 1000))
+        'confidence_interval': trial.suggest_uniform('confidence_interval', 0.7, 0.99)
     }
 
 
@@ -75,6 +78,7 @@ def optimize_ppo2(trial):
         'ent_coef': trial.suggest_loguniform('ent_coef', 1e-8, 1e-1),
         'cliprange': trial.suggest_uniform('clip_range', 0.1, 0.4),
         'cliprange_vf': trial.suggest_uniform('clip_range', 0.1, 0.4),
+        'lam': trial.suggest_uniform('lam', 0.8, 1.)
     }
 
 

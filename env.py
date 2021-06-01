@@ -5,10 +5,18 @@ import numpy as np
 import requests
 import json
 import random
+import warnings
 from collections import deque
 from empyrical import sortino_ratio, calmar_ratio, omega_ratio
+from statsmodels.tsa.statespace.sarimax import SARIMAX
+from statsmodels.tools.sm_exceptions import ConvergenceWarning
 
 from visualize import TradingGraph
+
+warnings.simplefilter('ignore', ConvergenceWarning)
+warnings.simplefilter('ignore', RuntimeWarning)
+warnings.simplefilter('ignore', UserWarning)
+
 
 LOOKBACK_WINDOW_SIZE = 100
 MAX_VALUE = 3.4e38 # ~Max float 32
@@ -24,13 +32,16 @@ class CryptoTradingEnv(gym.Env):
                 max_initial_balance, 
                 reward_func,
                 reward_len,
+                forecast_len,
+                lookback_interval,
+                confidence_interval,
                 fee=0.005):
         
         super(CryptoTradingEnv, self).__init__()
 
         self.max_initial_balance = max_initial_balance
         self.initial_balance = random.randint(1000, max_initial_balance)
-        self.df = df
+        self.df = df.fillna(method='bfill')
         self.coins = coins
         self.max_steps = len(df.index) - 1
         self.fee = fee
@@ -43,6 +54,9 @@ class CryptoTradingEnv(gym.Env):
         self.trades = []
         self.reward_func = reward_func
         self.reward_len = reward_len
+        self.forecast_len = forecast_len
+        self.lookback_interval = lookback_interval
+        self.confidence_interval = confidence_interval
 
         # Buy/sell/hold for each coin
         self.action_space = spaces.Box(low=np.array([-1, -1, -1], dtype=np.float16), high=np.array([1, 1, 1], dtype=np.float32), dtype=np.float32)
@@ -51,7 +65,7 @@ class CryptoTradingEnv(gym.Env):
         self.observation_space = spaces.Box(
             low=-MAX_VALUE,
             high=MAX_VALUE, 
-            shape=((len(coins) * 6 + 3),), # (num_coins * (portefolio value & candles) + (balance & net worth & timestamp)) * (frame_size -1)
+            shape=((len(coins)*(6 + self.forecast_len*3) + 3),), # (num_coins * (portefolio value & candles & forecast_len*3) + (balance & net worth & timestamp))
             dtype=np.float32
         )
 
@@ -117,7 +131,7 @@ class CryptoTradingEnv(gym.Env):
 
 
     def _take_action(self, action):
-        action = np.nan_to_num(action)
+        action = np.nan_to_num(action, posinf=1, neginf=-1)
         action_type = action[0]
         amount = 0.5*(action[1] - 1) + 1 # https://tiagoolivoto.github.io/metan/reference/resca.html
 
@@ -181,12 +195,15 @@ class CryptoTradingEnv(gym.Env):
             low_values = self.df.loc[self.current_step - 1: self.current_step, coin + '_low'].values
             close_values = self.df.loc[self.current_step - 1: self.current_step, coin + '_close'].values
             volume_values = self.df.loc[self.current_step - 1: self.current_step, coin + '_volume'].values
-
             frame = np.concatenate((frame, np.diff(np.log(open_values))))
             frame = np.concatenate((frame, np.diff(np.log(high_values))))
             frame = np.concatenate((frame, np.diff(np.log(low_values))))
             frame = np.concatenate((frame, np.diff(np.log(close_values))))
             frame = np.concatenate((frame, np.diff(np.log(volume_values))))
+
+            forecast = self._get_forecast(coin)
+            frame = np.concatenate((frame, forecast.predicted_mean))
+            frame = np.concatenate((frame, forecast.conf_int().flatten()))
 
             frame = np.concatenate((frame, np.diff(np.log(self.portfolio[coin]))))
 
@@ -195,7 +212,21 @@ class CryptoTradingEnv(gym.Env):
 
         frame = np.concatenate((frame, np.diff(np.log(self.balance))))
         frame = np.concatenate((frame, np.diff(np.log(self.net_worth[self.current_step-1:self.current_step+1]))))
+
         return np.nan_to_num(frame, posinf=MAX_VALUE, neginf=-MAX_VALUE)
+
+
+    def _get_forecast(self, coin):
+        past_close_values = self.df.loc[self.current_step - self.lookback_interval: self.current_step, coin + '_close'].values
+
+        if len(past_close_values) < 3:
+            past_close_values = np.insert(past_close_values, 0, past_close_values[0])
+
+        forecast_model = SARIMAX(np.nan_to_num(np.diff(np.log(past_close_values))))
+        model_fit = forecast_model.fit(method='bfgs', disp=False, start_params=[0, 0, 0, 1])
+        forecast = model_fit.get_forecast(steps=self.forecast_len, alpha=(1 - self.confidence_interval))
+
+        return forecast
 
 
     def _calculate_net_worth(self):

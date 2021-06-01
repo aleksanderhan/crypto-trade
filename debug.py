@@ -1,26 +1,29 @@
-import os, sys
-import requests
-import pandas as pd
 import numpy as np
-import optuna
-from collections import deque
-
-from stable_baselines import PPO2
-from stable_baselines.common import make_vec_env
-from stable_baselines.common.policies import MlpPolicy, MlpLstmPolicy
-from stable_baselines.common.vec_env import DummyVecEnv, SubprocVecEnv
-
-from env import CryptoTradingEnv
-from lib import get_data, load_params
+from statsmodels.tsa.statespace.sarimax import SARIMAX
+import matplotlib.pylab as plt
 
 
-start_time = '2021-05-20T00:00'
-end_time = '2021-05-28T00:00'
-max_initial_balance = 10000
 
 
-env = CryptoTradingEnv(data, coins, max_initial_balance, **env_params)
-    env = make_vec_env(lambda: env, n_envs=1, vec_env_cls=DummyVecEnv)
 
 
-model = PPO2(MlpLstmPolicy, env, nminibatches=1, **model_params)
+
+def _get_forecast(df):
+    past_close_values = df
+
+
+    forecast_model = SARIMAX(np.nan_to_num(np.diff(np.log(past_close_values))))
+    model_fit = forecast_model.fit(method='bfgs', disp=False)
+    forecast = model_fit.get_forecast(steps=10, alpha=(1 - 0.8))
+
+    return forecast
+
+
+
+
+df = [34557.95, 34525.95, 3]
+
+
+
+
+f = _get_forecast(df)
