@@ -1,4 +1,4 @@
-stable-baselines3[extra]
+stable-baselines
 matplotlib==3.2.2
 empyrical
 optuna

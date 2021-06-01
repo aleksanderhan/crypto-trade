@@ -4,11 +4,10 @@ import pandas as pd
 import random
 from time import perf_counter
 
-from stable_baselines3 import PPO, A2C
-from stable_baselines3.common.env_util import make_vec_env
-from stable_baselines3.common.vec_env import SubprocVecEnv, DummyVecEnv
-from stable_baselines3.common.evaluation import evaluate_policy
-from stable_baselines3.common.env_checker import check_env
+from stable_baselines import PPO2
+from stable_baselines.common import make_vec_env
+from stable_baselines.common.policies import MlpLstmPolicy
+from stable_baselines.common.vec_env import DummyVecEnv, SubprocVecEnv
 
 from env import CryptoTradingEnv
 from test import run_n_test
@@ -19,7 +18,7 @@ from lib import get_data, load_params
 
 coins = ['btc', 'eth'] #, 'ada', 'link', 'algo', 'nmr', 'xlm'] # 'FIL', 'STORJ', 'AAVE', 'COMP', 'LTC', 
 coins_str = ','.join(coins)
-policy='MlpPolicy'
+policy = 'MlpLstmPolicy'
 granularity = 60
 start_time = '2021-01-01T00:00'
 end_time = '2021-05-20T00:00'
@@ -28,7 +27,7 @@ episodes = 1000
 max_initial_balance = 50000
 training_split = 0.9
 reward_func = 'simple' # sortino, calmar, omega, simple, custom
-
+n_envs=16
 
 
 if __name__ == '__main__':
@@ -40,8 +39,7 @@ if __name__ == '__main__':
     test_df = df[slice_point:]
     test_df.reset_index(drop=True, inplace=True)
 
-    test_env = CryptoTradingEnv(test_df, coins, max_initial_balance, reward_func, **env_params)
-    #check_env(test_env)
+    test_env = CryptoTradingEnv(test_df, coins, max_initial_balance, **env_params)
 
     validation_env = make_vec_env(
         lambda: test_env, 
@@ -56,22 +54,21 @@ if __name__ == '__main__':
         episode_df.reset_index(drop=True, inplace=True)
 
         train_env = make_vec_env(
-            lambda: CryptoTradingEnv(episode_df, coins, max_initial_balance, reward_func, **env_params), 
-            n_envs=16,
+            lambda: CryptoTradingEnv(episode_df, coins, max_initial_balance, **env_params), 
+            n_envs=n_envs,
             vec_env_cls=SubprocVecEnv
         )
 
-        model = PPO(policy, 
+        model = PPO2(policy, 
                     train_env, 
-                    verbose=0, 
-                    n_epochs=epochs,
-                    device='cpu',
+                    verbose=1, 
+                    noptepochs=epochs,
+                    nminibatches=n_envs,
                     tensorboard_log='./tensorboard/',
                     **model_params)
 
         model_name = model.__class__.__name__
-        frame_size = env_params['frame_size']
-        fname = f'{model_name}-{policy}-{reward_func}-fs{frame_size}-g{granularity}-{coins_str}'
+        fname = f'{model_name}-{policy}-{reward_func}-g{granularity}-{coins_str}'
         
         if os.path.isfile(fname + '.zip'):
             model.load(fname)  
@@ -79,14 +76,12 @@ if __name__ == '__main__':
 
         t0 = perf_counter()
         for _ in range(3):
-            model.learn(total_timesteps=len(episode_df.index) - frame_size)
+            model.learn(total_timesteps=len(episode_df.index) - 1)
         t1 = perf_counter()
         
         model.save(fname)
 
         print(e, 'training time:', t1 - t0)
-        mean_reward, std_reward = evaluate_policy(model, validation_env, n_eval_episodes=5, deterministic=True)
-        print('mean_reward:', mean_reward, 'std_reward:', std_reward)
 
 
     run_n_test(model, validation_env, 5, False)
