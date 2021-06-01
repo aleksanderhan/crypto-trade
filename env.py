@@ -107,7 +107,7 @@ class CryptoTradingEnv(gym.Env):
             reward = omega_ratio(returns)
         elif self.reward_func == 'custom':
             reward = np.average(
-                [sortino_ratio(returns), calmar_ratio(returns), omega_ratio(returns)], [1, 1, 1])
+                [sortino_ratio(returns), calmar_ratio(returns), omega_ratio(returns)], weights=[1, 1, 1])
         elif self.reward_func == 'simple':
             reward = returns[-1]
         else:
