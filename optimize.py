@@ -74,7 +74,7 @@ def optimize_ppo2(trial):
         'learning_rate': trial.suggest_loguniform('learning_rate', 1e-5, 1.),
         'ent_coef': trial.suggest_loguniform('ent_coef', 1e-8, 1e-1),
         'cliprange': trial.suggest_uniform('clip_range', 0.1, 0.4),
-        'cliprange_vf': trial.suggest_uniform('clip_range', -0.1, 0.4),
+        'cliprange_vf': trial.suggest_uniform('clip_range', 0.1, 0.4),
     }
 
 

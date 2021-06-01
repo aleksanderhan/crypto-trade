@@ -45,7 +45,7 @@ class CryptoTradingEnv(gym.Env):
         self.reward_len = reward_len
 
         # Buy/sell/hold for each coin
-        self.action_space = spaces.Box(low=np.array([-1, -1, -1], dtype=np.float16), high=np.array([1, 1, 1], dtype=np.float16), dtype=np.float16)
+        self.action_space = spaces.Box(low=np.array([-1, -1, -1], dtype=np.float16), high=np.array([1, 1, 1], dtype=np.float32), dtype=np.float32)
 
         # prices over the last few days and portfolio status
         self.observation_space = spaces.Box(
@@ -117,9 +117,10 @@ class CryptoTradingEnv(gym.Env):
 
 
     def _take_action(self, action):
+        action = np.nan_to_num(action)
         action_type = action[0]
         amount = 0.5*(action[1] - 1) + 1 # https://tiagoolivoto.github.io/metan/reference/resca.html
-        
+
         coin_action = ((len(self.coins) - 1) / 2) * (action[2] - 1) + len(self.coins) - 1
         coin = self.coins[int(coin_action)]
 
