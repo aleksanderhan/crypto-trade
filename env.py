@@ -35,7 +35,13 @@ class CryptoTradingEnv(gym.Env):
                 forecast_len,
                 lookback_interval,
                 confidence_interval,
-                use_sarimax,
+                sarimax_p,
+                sarimax_d,
+                sarimax_q,
+                sarimax_P,
+                sarimax_D,
+                sarimax_Q,
+                sarimax_m,
                 fee=0.005):
         
         super(CryptoTradingEnv, self).__init__()
@@ -58,7 +64,13 @@ class CryptoTradingEnv(gym.Env):
         self.forecast_len = forecast_len
         self.lookback_interval = lookback_interval
         self.confidence_interval = confidence_interval
-        self.use_sarimax = use_sarimax
+        self.sarimax_p = sarimax_p
+        self.sarimax_d = sarimax_d
+        self.sarimax_q = sarimax_q
+        self.sarimax_P = sarimax_P
+        self.sarimax_D = sarimax_D
+        self.sarimax_Q = sarimax_Q
+        self.sarimax_m = sarimax_m
 
         # Buy/sell/hold for each coin
         self.action_space = spaces.Box(low=np.array([-1, -1, -1], dtype=np.float16), high=np.array([1, 1, 1], dtype=np.float32), dtype=np.float32)
@@ -67,7 +79,7 @@ class CryptoTradingEnv(gym.Env):
         self.observation_space = spaces.Box(
             low=-MAX_VALUE,
             high=MAX_VALUE, 
-            shape=((len(coins)*(6 + self.forecast_len*3) + 3),) if use_sarimax else ((len(coins)*6 + 3),), # (num_coins * (portefolio value & candles & forecast_len*3) + (balance & net worth & timestamp))
+            shape=((len(coins) * (6 + self.forecast_len*4) + 3),), # (num_coins * (portefolio value & candles & forecast_len*4) + (balance & net worth & timestamp))
             dtype=np.float32
         )
 
@@ -203,17 +215,17 @@ class CryptoTradingEnv(gym.Env):
             frame = np.concatenate((frame, np.diff(np.log(close_values))))
             frame = np.concatenate((frame, np.diff(np.log(volume_values))))
 
-            if self.use_sarimax:
-                forecast, prediction = self._get_forecast(coin)
-                frame = np.concatenate((frame, forecast.predicted_mean))
-                frame = np.concatenate((frame, forecast.conf_int().flatten()))
+            frame = np.concatenate((frame, np.diff(np.log(np.array(self.portfolio[coin]) + 1)))) # +1 dealing with 0 log
 
-            frame = np.concatenate((frame, np.diff(np.log(self.portfolio[coin]))))
+            forecast, prediction = self._get_forecast(coin)
+            frame = np.concatenate((frame, forecast.predicted_mean))
+            frame = np.concatenate((frame, forecast.conf_int().flatten()))
+            frame = np.concatenate((frame, prediction))
 
         timestamp_values = self.df.loc[self.current_step - 1: self.current_step, 'timestamp'].values
         frame = np.concatenate((frame, np.diff(np.log(timestamp_values))))
 
-        frame = np.concatenate((frame, np.diff(np.log(self.balance))))
+        frame = np.concatenate((frame, np.diff(np.log(np.array(self.balance) + 1))))
         frame = np.concatenate((frame, np.diff(np.log(self.net_worth[self.current_step-1:self.current_step+1]))))
 
         return np.nan_to_num(frame, posinf=MAX_VALUE, neginf=-MAX_VALUE)
@@ -222,14 +234,20 @@ class CryptoTradingEnv(gym.Env):
     def _get_forecast(self, coin):
         past_close_values = self.df.loc[self.current_step - self.lookback_interval: self.current_step, coin + '_close'].values
 
-        if len(past_close_values) < 3:
+        if len(past_close_values) < 3: # Padding values at first frame
             past_close_values = np.insert(past_close_values, 0, past_close_values[0])
 
-        forecast_model = SARIMAX(np.nan_to_num(np.diff(np.log(past_close_values))))
-        model_fit = forecast_model.fit(method='bfgs', disp=False, start_params=[0, 0, 0, 1])
-        forecast = model_fit.get_forecast(steps=self.forecast_len, alpha=(1 - self.confidence_interval))
+        forecast_model = SARIMAX(np.nan_to_num(np.diff(np.log(past_close_values))),
+            order=(self.sarimax_p, self.sarimax_d, self.sarimax_q),
+            seasonal_order=(self.sarimax_P, self.sarimax_D, self.sarimax_Q, self.sarimax_m),
+            enforce_stationarity=False,
+            enforce_invertibility=False)
 
-        return forecast, model_fit.predict(self.forecast_len)
+        model_fit = forecast_model.fit(method='lbfgs', disp=False, start_params=[0, 0, 0, 0, 1], simple_differencing = True)
+        forecast = model_fit.get_forecast(steps=self.forecast_len, alpha=(1 - self.confidence_interval))
+        prediction = model_fit.predict(start=self.lookback_interval + 1, end=self.lookback_interval + self.forecast_len, typ='levels')
+
+        return forecast, prediction
 
 
     def _calculate_net_worth(self):

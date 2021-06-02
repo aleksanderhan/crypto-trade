@@ -61,18 +61,24 @@ def objective_fn(trial):
 def optimize_env(trial):
     return {
         'reward_func': trial.suggest_categorical('reward_func', ['sortino', 'calmar', 'omega', 'simple', 'custom']),
-        'reward_len': int(trial.suggest_uniform('reward_len', 2, 200)),
-        'forecast_len': int(trial.suggest_uniform('forecast_len', 1, 200)),
-        'lookback_interval': int(trial.suggest_uniform('lookback_interval', 10, 1000)),
+        'reward_len': trial.suggest_int('reward_len', 2, 200),
+        'forecast_len': trial.suggest_int('forecast_len', 1, 200),
+        'lookback_interval': trial.suggest_int('lookback_interval', 10, 1000),
         'confidence_interval': trial.suggest_uniform('confidence_interval', 0.7, 0.99),
-        'use_sarimax': trial.suggest_categorical('use_sarimax', [0, 1])
+        'sarimax_p': trial.suggest_int('sarimax_p', 0, 10),
+        'sarimax_d': trial.suggest_int('sarimax_d', 0, 10),
+        'sarimax_q': trial.suggest_int('sarimax_q', 0, 10),
+        'sarimax_P': trial.suggest_int('sarimax_P', 0, 10),
+        'sarimax_D': trial.suggest_int('sarimax_D', 0, 10),
+        'sarimax_Q': trial.suggest_int('sarimax_Q', 0, 10),
+        'sarimax_m': trial.suggest_int('sarimax_m', 0, 100)
     }
 
 
 def optimize_ppo2(trial):
     return {
         'policy': trial.suggest_categorical('policy', ['MlpPolicy', 'MlpLstmPolicy', 'MlpLnLstmPolicy']),
-        'n_steps': int(trial.suggest_uniform('n_steps', 16, 2048)),
+        'n_steps': trial.suggest_int('n_steps', 16, 2048),
         'gamma': trial.suggest_loguniform('gamma', 0.9, 0.9999),
         'learning_rate': trial.suggest_loguniform('learning_rate', 1e-5, 1.),
         'ent_coef': trial.suggest_loguniform('ent_coef', 1e-8, 1e-1),

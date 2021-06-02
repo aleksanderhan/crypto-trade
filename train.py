@@ -24,8 +24,7 @@ epochs = 30
 episodes = 1000
 max_initial_balance = 50000
 training_split = 0.9
-reward_func = 'simple' # sortino, calmar, omega, simple, custom
-n_envs=16
+n_envs=8
 
 
 if __name__ == '__main__':
@@ -37,10 +36,8 @@ if __name__ == '__main__':
     test_df = df[slice_point:]
     test_df.reset_index(drop=True, inplace=True)
 
-    test_env = CryptoTradingEnv(test_df, coins, max_initial_balance, **env_params)
-
     validation_env = make_vec_env(
-        lambda: test_env, 
+        lambda: CryptoTradingEnv(test_df, coins, max_initial_balance, **env_params), 
         n_envs=1,
         vec_env_cls=DummyVecEnv
     )
@@ -68,7 +65,7 @@ if __name__ == '__main__':
                     **model_params)
 
         model_name = model.__class__.__name__
-        policy = model_params['policy']
+        reward_func = env_params['reward_func']
         fname = f'{model_name}-{policy}-{reward_func}-g{granularity}-{coins_str}'
         
         if os.path.isfile(fname + '.zip'):
