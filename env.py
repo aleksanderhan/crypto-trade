@@ -13,9 +13,9 @@ from statsmodels.tools.sm_exceptions import ConvergenceWarning
 
 from visualize import TradingGraph
 
-#warnings.simplefilter('ignore', ConvergenceWarning)
-#warnings.simplefilter('ignore', RuntimeWarning)
-#warnings.simplefilter('ignore', UserWarning)
+warnings.simplefilter('ignore', ConvergenceWarning)
+warnings.simplefilter('ignore', RuntimeWarning)
+warnings.simplefilter('ignore', UserWarning)
 
 
 LOOKBACK_WINDOW_SIZE = 100
@@ -229,7 +229,7 @@ class CryptoTradingEnv(gym.Env):
             enforce_stationarity=False,
             enforce_invertibility=False)
 
-        model_fit = forecast_model.fit()
+        model_fit = forecast_model.fit(start_params=[0, 0, 0, 0, 1, 1])
         forecast = model_fit.get_forecast(steps=self.forecast_len, alpha=(1 - self.confidence_interval), typ='levels')
 
         return forecast
