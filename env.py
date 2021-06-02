@@ -8,14 +8,14 @@ import random
 import warnings
 from collections import deque
 from empyrical import sortino_ratio, calmar_ratio, omega_ratio
-from statsmodels.tsa.statespace.sarimax import SARIMAX
+from statsmodels.tsa.arima.model import ARIMA
 from statsmodels.tools.sm_exceptions import ConvergenceWarning
 
 from visualize import TradingGraph
 
-warnings.simplefilter('ignore', ConvergenceWarning)
-warnings.simplefilter('ignore', RuntimeWarning)
-warnings.simplefilter('ignore', UserWarning)
+#warnings.simplefilter('ignore', ConvergenceWarning)
+#warnings.simplefilter('ignore', RuntimeWarning)
+#warnings.simplefilter('ignore', UserWarning)
 
 
 LOOKBACK_WINDOW_SIZE = 100
@@ -224,7 +224,7 @@ class CryptoTradingEnv(gym.Env):
         if len(past_close_values) < 3: # Padding values at first frame
             past_close_values = np.insert(past_close_values, 0, past_close_values[0])
 
-        forecast_model = SARIMAX(np.nan_to_num(np.diff(np.log(past_close_values))),
+        forecast_model = ARIMA(np.nan_to_num(np.diff(np.log(past_close_values))),
             order=(self.arima_p, self.arima_d, self.arima_q),
             enforce_stationarity=False,
             enforce_invertibility=False)
