@@ -79,7 +79,7 @@ class CryptoTradingEnv(gym.Env):
         self.observation_space = spaces.Box(
             low=-MAX_VALUE,
             high=MAX_VALUE, 
-            shape=((len(coins) * (6 + self.forecast_len*4) + 3),), # (num_coins * (portefolio value & candles & forecast_len*4) + (balance & net worth & timestamp))
+            shape=((len(coins) * (6 + self.forecast_len*3) + 3),), # (num_coins * (portefolio value & candles & forecast_len*3) + (balance & net worth & timestamp))
             dtype=np.float32
         )
 
@@ -217,10 +217,9 @@ class CryptoTradingEnv(gym.Env):
 
             frame = np.concatenate((frame, np.diff(np.log(np.array(self.portfolio[coin]) + 1)))) # +1 dealing with 0 log
 
-            forecast, prediction = self._get_forecast(coin)
+            forecast = self._get_forecast(coin)
             frame = np.concatenate((frame, forecast.predicted_mean))
             frame = np.concatenate((frame, forecast.conf_int().flatten()))
-            frame = np.concatenate((frame, prediction))
 
         timestamp_values = self.df.loc[self.current_step - 1: self.current_step, 'timestamp'].values
         frame = np.concatenate((frame, np.diff(np.log(timestamp_values))))
@@ -244,10 +243,9 @@ class CryptoTradingEnv(gym.Env):
             enforce_invertibility=False)
 
         model_fit = forecast_model.fit(method='lbfgs', disp=False, start_params=[0, 0, 0, 0, 1], simple_differencing = True)
-        forecast = model_fit.get_forecast(steps=self.forecast_len, alpha=(1 - self.confidence_interval))
-        prediction = model_fit.predict(start=self.lookback_interval + 1, end=self.lookback_interval + self.forecast_len, typ='levels')
+        forecast = model_fit.get_forecast(steps=self.forecast_len, alpha=(1 - self.confidence_interval), typ='levels')
 
-        return forecast, prediction
+        return forecast
 
 
     def _calculate_net_worth(self):

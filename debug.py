@@ -7,7 +7,7 @@ from time import perf_counter
 
 from lib import get_data
 
-'''
+
 x = np.linspace(-2*np.pi, 2*np.pi, 100)
 
 y = []
@@ -22,13 +22,14 @@ forecast_model = SARIMAX(y,order=(1, 0, 1),
               enforce_invertibility=False)
 model_fit = forecast_model.fit(method='bfgs', disp=False)
 
-#yf = model_fit.get_forecast(100)
+yf = model_fit.get_forecast(100, typ='levels')
 
 yp = model_fit.predict(start=101, end=200, typ='levels')
 print(len(yp))
 
 df.plot(figsize=(12,8),legend=True)
 yp.plot(legend=True)
+yf.predicted_mean.plot(legend=True)
 
 
 #plt.plot(x, yf.mean)
@@ -58,3 +59,4 @@ t3 = perf_counter()
 print(t1-t0)
 print(t2-t1)
 print(t3-t2)
+'''
