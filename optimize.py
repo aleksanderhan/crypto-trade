@@ -5,7 +5,6 @@ import optuna
 
 from stable_baselines import PPO2
 from stable_baselines.common import make_vec_env
-from stable_baselines.common.policies import MlpPolicy
 from stable_baselines.common.vec_env import DummyVecEnv
 
 from env import CryptoTradingEnv
@@ -34,10 +33,9 @@ def objective_fn(trial):
 
     train_env, validation_env = initialize_envs(env_params)
 
-    model = PPO2(MlpPolicy,
-                train_env, 
-                nminibatches=1,
-                **model_params)
+    policy = model_params['policy']
+    del model_params['policy']
+    model = PPO2(policy, train_env, nminibatches=1, **model_params)
 
     train_maxlen = len(train_env.get_attr('df')[0].index) - 1
     model.learn(train_maxlen)
@@ -73,6 +71,7 @@ def optimize_env(trial):
 
 def optimize_ppo2(trial):
     return {
+        'policy': trial.suggest_categorical('policy', ['MlpPolicy', 'MlpLstmPolicy', 'MlpLnLstmPolicy']),
         'n_steps': int(trial.suggest_uniform('n_steps', 16, 2048)),
         'gamma': trial.suggest_loguniform('gamma', 0.9, 0.9999),
         'learning_rate': trial.suggest_loguniform('learning_rate', 1e-5, 1.),

@@ -3,27 +3,20 @@ from statsmodels.tsa.statespace.sarimax import SARIMAX
 import matplotlib.pylab as plt
 
 
+x = np.linspace(-2*np.pi, 2*np.pi, 100)
+
+y = []
+for i in x:
+	y.append(np.sin(i) + i)
 
 
+forecast_model = SARIMAX(y)
+model_fit = forecast_model.fit(method='bfgs', disp=False)
 
+yp = model_fit.get_forecast(100)
 
+plt.plot(x, y)
 
-def _get_forecast(df):
-    past_close_values = df
+plt.plot(x, yp.mean)
 
-
-    forecast_model = SARIMAX(np.nan_to_num(np.diff(np.log(past_close_values))))
-    model_fit = forecast_model.fit(method='bfgs', disp=False)
-    forecast = model_fit.get_forecast(steps=10, alpha=(1 - 0.8))
-
-    return forecast
-
-
-
-
-df = [34557.95, 34525.95, 3]
-
-
-
-
-f = _get_forecast(df)
+plt.show()

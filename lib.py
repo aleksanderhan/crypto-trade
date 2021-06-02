@@ -29,6 +29,7 @@ def load_params():
             'use_sarimax': int(params['use_sarimax'])
         }
         model_params = {
+            'policy': params['policy'],
             'n_steps': int(params['n_steps']),
             'gamma': params['gamma'],
             'learning_rate': params['learning_rate'],
@@ -46,6 +47,7 @@ def load_params():
             'use_sarimax': 1
         }
         model_params = {
+            'policy': 'MlpLstmPolicy',
             'n_steps': 215,
             'gamma': 0.9287084025015536,
             'learning_rate': 0.014929699035787503,

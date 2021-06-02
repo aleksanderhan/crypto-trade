@@ -204,7 +204,7 @@ class CryptoTradingEnv(gym.Env):
             frame = np.concatenate((frame, np.diff(np.log(volume_values))))
 
             if self.use_sarimax:
-                forecast = self._get_forecast(coin)
+                forecast, prediction = self._get_forecast(coin)
                 frame = np.concatenate((frame, forecast.predicted_mean))
                 frame = np.concatenate((frame, forecast.conf_int().flatten()))
 
@@ -229,7 +229,7 @@ class CryptoTradingEnv(gym.Env):
         model_fit = forecast_model.fit(method='bfgs', disp=False, start_params=[0, 0, 0, 1])
         forecast = model_fit.get_forecast(steps=self.forecast_len, alpha=(1 - self.confidence_interval))
 
-        return forecast
+        return forecast, model_fit.predict(self.forecast_len)
 
 
     def _calculate_net_worth(self):

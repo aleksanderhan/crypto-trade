@@ -57,7 +57,9 @@ if __name__ == '__main__':
             vec_env_cls=SubprocVecEnv
         )
 
-        model = PPO2(policy, 
+        policy = model_params['policy']
+        del model_params['policy']
+        model = PPO2(policy,
                     train_env, 
                     verbose=1, 
                     noptepochs=epochs,
@@ -66,6 +68,7 @@ if __name__ == '__main__':
                     **model_params)
 
         model_name = model.__class__.__name__
+        policy = model_params['policy']
         fname = f'{model_name}-{policy}-{reward_func}-g{granularity}-{coins_str}'
         
         if os.path.isfile(fname + '.zip'):

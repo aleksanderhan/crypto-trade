@@ -36,15 +36,9 @@ def run_n_test(model, env, n, render=False):
     print('Profit:', np.mean(profit), ' +/-', np.std(profit))
 
 
-def load_model(fname, env):
-    policy_type = fname.split('-')[1]
-
-    if policy_type == 'MlpPolicy':
-        model = PPO2(MlpPolicy, env, nminibatches=1, **model_params)
-    elif policy_type == 'MlpLstmPolicy':
-        model = PPO2(MlpLstmPolicy, env, nminibatches=1, **model_params)
-    else:
-        raise NotImplementedError
+def load_model(policy, env, model_params):
+    del model_params['policy']
+    model = PPO2(policy, env, nminibatches=1, **model_params)
 
     if os.path.isfile(fname + '.zip'):
         model.load(fname)
@@ -61,6 +55,7 @@ render = True
 
 if __name__ == '__main__':
     fname = sys.argv[1].split('.')[0]
+    policy = fname.split('-')[1]
     reward_func = fname.split('-')[2]
     granularity = int(fname.split('-')[3].strip('g'))
     coins = fname.split('-')[-1].split(',')
