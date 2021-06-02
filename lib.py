@@ -26,13 +26,9 @@ def load_params():
             'forecast_len': params['forecast_len'],
             'lookback_interval': params['lookback_interval'],
             'confidence_interval': params['confidence_interval'],
-            'sarimax_p': params['sarimax_p'],
-            'sarimax_d': params['sarimax_d'],
-            'sarimax_q': params['sarimax_q'],
-            'sarimax_P': params['sarimax_P'],
-            'sarimax_D': params['sarimax_D'],
-            'sarimax_Q': params['sarimax_Q'],
-            'sarimax_m': params['sarimax_m']
+            'arima_p': params['arima_p'],
+            'arima_d': params['arima_d'],
+            'arima_q': params['arima_q']
         }
         model_params = {
             'policy': params['policy'],
@@ -50,13 +46,9 @@ def load_params():
             'forecast_len': 94,
             'lookback_interval': 762,
             'confidence_interval': 0.738,
-            'sarimax_p': 1,
-            'sarimax_d': 0,
-            'sarimax_q': 1,
-            'sarimax_P': 2,
-            'sarimax_D': 1,
-            'sarimax_Q': 0,
-            'sarimax_m': 12
+            'arima_p': 1,
+            'arima_d': 0,
+            'arima_q': 1
         }
         model_params = {
             'policy': 'MlpPolicy',

@@ -35,13 +35,9 @@ class CryptoTradingEnv(gym.Env):
                 forecast_len,
                 lookback_interval,
                 confidence_interval,
-                sarimax_p,
-                sarimax_d,
-                sarimax_q,
-                sarimax_P,
-                sarimax_D,
-                sarimax_Q,
-                sarimax_m,
+                arima_p,
+                arima_d,
+                arima_q,
                 fee=0.005):
         
         super(CryptoTradingEnv, self).__init__()
@@ -64,13 +60,9 @@ class CryptoTradingEnv(gym.Env):
         self.forecast_len = forecast_len
         self.lookback_interval = lookback_interval
         self.confidence_interval = confidence_interval
-        self.sarimax_p = sarimax_p
-        self.sarimax_d = sarimax_d
-        self.sarimax_q = sarimax_q
-        self.sarimax_P = sarimax_P
-        self.sarimax_D = sarimax_D
-        self.sarimax_Q = sarimax_Q
-        self.sarimax_m = sarimax_m
+        self.arima_p = arima_p
+        self.arima_d = arima_d
+        self.arima_q = arima_q
 
         # Buy/sell/hold for each coin
         self.action_space = spaces.Box(low=np.array([-1, -1, -1], dtype=np.float16), high=np.array([1, 1, 1], dtype=np.float32), dtype=np.float32)
@@ -126,16 +118,12 @@ class CryptoTradingEnv(gym.Env):
     def _get_reward(self, reward_func=None):        
         returns = np.diff(self.net_worth[-self.reward_len:])
 
-
         if self.reward_func == 'sortino':
             reward = sortino_ratio(returns)
         elif self.reward_func == 'calmar':
             reward = calmar_ratio(returns)
         elif self.reward_func == 'omega':
             reward = omega_ratio(returns)
-        elif self.reward_func == 'custom':
-            reward = np.average(
-                [sortino_ratio(returns), calmar_ratio(returns), omega_ratio(returns)], weights=[1, 1, 1])
         elif self.reward_func == 'simple':
             reward = returns[-1]
         else:
@@ -237,12 +225,11 @@ class CryptoTradingEnv(gym.Env):
             past_close_values = np.insert(past_close_values, 0, past_close_values[0])
 
         forecast_model = SARIMAX(np.nan_to_num(np.diff(np.log(past_close_values))),
-            order=(self.sarimax_p, self.sarimax_d, self.sarimax_q),
-            seasonal_order=(self.sarimax_P, self.sarimax_D, self.sarimax_Q, self.sarimax_m),
+            order=(self.arima_p, self.arima_d, self.arima_q),
             enforce_stationarity=False,
             enforce_invertibility=False)
 
-        model_fit = forecast_model.fit(method='lbfgs', disp=False, start_params=[0, 0, 0, 0, 1], simple_differencing = True)
+        model_fit = forecast_model.fit()
         forecast = model_fit.get_forecast(steps=self.forecast_len, alpha=(1 - self.confidence_interval), typ='levels')
 
         return forecast

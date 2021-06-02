@@ -60,18 +60,14 @@ def objective_fn(trial):
 
 def optimize_env(trial):
     return {
-        'reward_func': trial.suggest_categorical('reward_func', ['sortino', 'calmar', 'omega', 'simple', 'custom']),
+        'reward_func': trial.suggest_categorical('reward_func', ['sortino', 'calmar', 'omega', 'simple']),
         'reward_len': trial.suggest_int('reward_len', 2, 200),
         'forecast_len': trial.suggest_int('forecast_len', 1, 200),
         'lookback_interval': trial.suggest_int('lookback_interval', 10, 1000),
         'confidence_interval': trial.suggest_uniform('confidence_interval', 0.7, 0.99),
-        'sarimax_p': trial.suggest_int('sarimax_p', 0, 10),
-        'sarimax_d': trial.suggest_int('sarimax_d', 0, 10),
-        'sarimax_q': trial.suggest_int('sarimax_q', 0, 10),
-        'sarimax_P': trial.suggest_int('sarimax_P', 0, 10),
-        'sarimax_D': trial.suggest_int('sarimax_D', 0, 10),
-        'sarimax_Q': trial.suggest_int('sarimax_Q', 0, 10),
-        'sarimax_m': trial.suggest_int('sarimax_m', 0, 100)
+        'arima_p': trial.suggest_int('arima_p', 0, 5),
+        'arima_d': trial.suggest_int('arima_d', 0, 5),
+        'arima_q': trial.suggest_int('arima_q', 0, 5)
     }
 
 
