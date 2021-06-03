@@ -40,7 +40,7 @@ def load_params():
         env_params = {
             'reward_func': 'sortino',
             'reward_len': 4,
-            'forecast_len': 5,
+            'forecast_len': 8,
             'lookback_interval': 50,
             'confidence_interval': 0.738
         }

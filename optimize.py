@@ -2,6 +2,7 @@ import requests
 import pandas as pd
 import numpy as np
 import optuna
+import warnings
 
 from stable_baselines import PPO2
 from stable_baselines.common import make_vec_env
@@ -9,6 +10,8 @@ from stable_baselines.common.vec_env import DummyVecEnv
 
 from env import CryptoTradingEnv
 from lib import get_data
+
+warnings.filterwarnings("ignore")
 
 
 coins = ['btc', 'eth']

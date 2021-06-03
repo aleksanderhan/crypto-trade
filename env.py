@@ -14,9 +14,7 @@ from time import perf_counter
 
 from visualize import TradingGraph
 
-warnings.simplefilter('ignore', ConvergenceWarning)
-warnings.simplefilter('ignore', RuntimeWarning)
-warnings.simplefilter('ignore', UserWarning)
+warnings.filterwarnings("ignore")
 
 
 LOOKBACK_WINDOW_SIZE = 100

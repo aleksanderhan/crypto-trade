@@ -3,15 +3,19 @@ import requests
 import pandas as pd
 import numpy as np
 import optuna
+import warnings
 from collections import deque
 
 from stable_baselines import PPO2
 from stable_baselines.common import make_vec_env
 from stable_baselines.common.policies import MlpPolicy, MlpLstmPolicy
 from stable_baselines.common.vec_env import DummyVecEnv, SubprocVecEnv
+from stable_baselines.common.evaluation import evaluate_policy
 
 from env import CryptoTradingEnv
 from lib import get_data, load_params
+
+warnings.filterwarnings("ignore")
 
 
 def test_model(model, env, render):
@@ -22,7 +26,7 @@ def test_model(model, env, render):
         action, _states = model.predict(obs)
         obs, reward, done, info = env.step(action)
         if render:
-            env.render(mode='human')
+            env.render(mode='console')
         else:
             print(info[0]['current_step'], '/', info[0]['max_steps'], end="\r", flush=True)
 
@@ -49,7 +53,7 @@ def load_model(fname, env, model_params):
 
 
 start_time = '2021-05-20T00:00'
-end_time = '2021-05-28T00:00'
+end_time = '2021-05-22T00:00'
 max_initial_balance = 10000
 episodes = 3
 render = False
@@ -71,5 +75,6 @@ if __name__ == '__main__':
     
     model = load_model(fname, env, model_params)
 
-    print('Trained:')
-    run_n_test(model, env, episodes, render)
+    evaluate_policy(model, env, deterministic=False, render=render, n_eval_episodes=episodes)
+
+    #run_n_test(model, env, episodes, render)
