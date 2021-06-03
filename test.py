@@ -36,7 +36,8 @@ def run_n_test(model, env, n, render=False):
     print('Profit:', np.mean(profit), ' +/-', np.std(profit))
 
 
-def load_model(policy, env, model_params):
+def load_model(fname, env, model_params):
+    policy = model_params['policy']
     del model_params['policy']
     model = PPO2(policy, env, nminibatches=1, **model_params)
 
@@ -67,7 +68,7 @@ if __name__ == '__main__':
     env = make_vec_env(lambda: env, n_envs=1, vec_env_cls=DummyVecEnv)
 
     
-    model = load_model(fname, env)
+    model = load_model(fname, env, model_params)
 
     print('Trained:')
     run_n_test(model, env, episodes, render)

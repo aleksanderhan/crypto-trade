@@ -10,6 +10,7 @@ from collections import deque
 from empyrical import sortino_ratio, calmar_ratio, omega_ratio
 from statsmodels.tsa.arima.model import ARIMA
 from statsmodels.tools.sm_exceptions import ConvergenceWarning
+from time import perf_counter
 
 from visualize import TradingGraph
 
@@ -35,9 +36,7 @@ class CryptoTradingEnv(gym.Env):
                 forecast_len,
                 lookback_interval,
                 confidence_interval,
-                arima_p,
-                arima_d,
-                arima_q,
+                arima_order=(0, 1, 0),
                 fee=0.005):
         
         super(CryptoTradingEnv, self).__init__()
@@ -60,9 +59,7 @@ class CryptoTradingEnv(gym.Env):
         self.forecast_len = forecast_len
         self.lookback_interval = lookback_interval
         self.confidence_interval = confidence_interval
-        self.arima_p = arima_p
-        self.arima_d = arima_d
-        self.arima_q = arima_q
+        self.arima_order = arima_order
 
         # Buy/sell/hold for each coin
         self.action_space = spaces.Box(low=np.array([-1, -1, -1], dtype=np.float16), high=np.array([1, 1, 1], dtype=np.float32), dtype=np.float32)
@@ -84,7 +81,7 @@ class CryptoTradingEnv(gym.Env):
         #delay_modifier = (self.current_step / self.max_steps)
         #profit = self.get_profit()
 
-        obs = self._next_observation()
+        obs, dt = self._next_observation()
         reward = self._get_reward(self.reward_func)
         done = self.net_worth[-1] <= 0 or self.current_step >= self.max_steps
 
@@ -92,7 +89,8 @@ class CryptoTradingEnv(gym.Env):
             'current_step': self.current_step, 
             'last_trade': self._get_last_trade(),
             'profit': self.get_profit(),
-            'max_steps': self.max_steps
+            'max_steps': self.max_steps,
+            'obs_dt': dt
             }
 
 
@@ -190,6 +188,7 @@ class CryptoTradingEnv(gym.Env):
 
 
     def _next_observation(self):
+        t0 = perf_counter()
         frame = np.array([])
         for coin in self.coins:
             open_values = self.df.loc[self.current_step - 1: self.current_step, coin + '_open'].values
@@ -214,8 +213,9 @@ class CryptoTradingEnv(gym.Env):
 
         frame = np.concatenate((frame, np.diff(np.log(np.array(self.balance) + 1))))
         frame = np.concatenate((frame, np.diff(np.log(self.net_worth[self.current_step-1:self.current_step+1]))))
+        t1 = perf_counter()
 
-        return np.nan_to_num(frame, posinf=MAX_VALUE, neginf=-MAX_VALUE)
+        return np.nan_to_num(frame, posinf=MAX_VALUE, neginf=-MAX_VALUE), t1-t0
 
 
     def _get_forecast(self, coin):
@@ -225,7 +225,7 @@ class CryptoTradingEnv(gym.Env):
             past_close_values = np.insert(past_close_values, 0, past_close_values[0])
 
         forecast_model = ARIMA(np.nan_to_num(np.diff(np.log(past_close_values))),
-            order=(self.arima_p, self.arima_d, self.arima_q),
+            order=self.arima_order,
             enforce_stationarity=False,
             enforce_invertibility=False)
 

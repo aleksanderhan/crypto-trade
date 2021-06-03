@@ -3,6 +3,7 @@ import gym
 import pandas as pd
 import random
 from time import perf_counter
+import warnings
 
 from stable_baselines import PPO2
 from stable_baselines.common import make_vec_env
@@ -14,21 +15,30 @@ from test import run_n_test
 from lib import get_data, load_params
 
 
+warnings.simplefilter(action='ignore', category=FutureWarning)
+warnings.simplefilter('ignore', UserWarning)
+
+
+
 coins = ['btc', 'eth'] #, 'ada', 'link', 'algo', 'nmr', 'xlm'] # 'FIL', 'STORJ', 'AAVE', 'COMP', 'LTC', 
 coins_str = ','.join(coins)
 policy = 'MlpLstmPolicy'
 granularity = 60
-start_time = '2021-01-01T00:00'
+start_time = '2021-05-01T00:00'
 end_time = '2021-05-20T00:00'
 epochs = 30
 episodes = 1000
 max_initial_balance = 50000
 training_split = 0.9
-n_envs=8
+n_envs=2
 
 
 if __name__ == '__main__':
     env_params, model_params = load_params()
+    print(model_params)
+    policy = model_params['policy']
+    del model_params['policy']
+    
     df = get_data(start_time, end_time, coins, granularity)
 
     slice_point = int(len(df.index) * training_split)
@@ -54,8 +64,7 @@ if __name__ == '__main__':
             vec_env_cls=SubprocVecEnv
         )
 
-        policy = model_params['policy']
-        del model_params['policy']
+        
         model = PPO2(policy,
                     train_env, 
                     verbose=1, 
