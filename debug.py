@@ -16,33 +16,29 @@ for i in x:
 	y.append(np.sin(i) + i)
 
 df = pd.DataFrame(y)
-'''
-forecast_model = SARIMAX(df,order=(3, 1, 3),
-              seasonal_order=(3, 1, 3, 3),
-              enforce_stationarity=False,
-              enforce_invertibility=False)
 
-forecast_model = ARIMA(df,order=(3, 1, 3),
+
+forecast_model = ARIMA(df,order=(10, 1, 10),
               enforce_stationarity=False,
               enforce_invertibility=False)
 
 
 
 model_fit = forecast_model.fit()
-
 yf = model_fit.get_forecast(100, typ='levels')
+ci = yf.conf_int()
 
-yp = model_fit.predict(start=101, end=200, typ='levels')
-print(len(yp))
+ax = df.plot(label='observed', figsize=(20, 15))
+yf.predicted_mean.plot(ax=ax, label='Forecast')
+ax.fill_between(ci.index,
+                ci.iloc[:, 0],
+                ci.iloc[:, 1], color='k', alpha=.25)
 
-df.plot(figsize=(12,8),legend=True)
-yp.plot(legend=True)
-yf.predicted_mean.plot(legend=True)
 
-
-#plt.plot(x, yf.mean)
-
+plt.legend()
 plt.show()
+
+
 
 '''
 
@@ -72,3 +68,4 @@ print(t1-t0)
 print(t2-t1)
 print(t3-t2)
 print(t4-t3)
+'''

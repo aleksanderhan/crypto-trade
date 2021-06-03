@@ -261,6 +261,7 @@ class CryptoTradingEnv(gym.Env):
         if mode == 'console':
             for coin in self.coins:
                 print(coin, self.portfolio[coin][-1])
+
             print(f'Last_trade: {self._get_last_trade()}')
             print(f'Step: {self.current_step} of {self.max_steps}')
             print(f'Balance: {self.balance[-1]} (Initial balance: {self.initial_balance})')
@@ -275,6 +276,7 @@ class CryptoTradingEnv(gym.Env):
             
             if self.current_step > LOOKBACK_WINDOW_SIZE:        
                 self.visualization.render(self.current_step, self.net_worth[-1], self.trades, window_size=LOOKBACK_WINDOW_SIZE)
+
             print(f'Step: {self.current_step} of {self.max_steps}')
             print(f'Balance: {self.balance[-1]} (Initial balance: {self.initial_balance})')
             print(f'Net worth: {self.net_worth[-1]} (Max net worth: {self.max_net_worth})')
