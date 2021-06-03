@@ -25,7 +25,8 @@ def load_params():
             'reward_len': params['reward_len'],
             'forecast_len': params['forecast_len'],
             'lookback_interval': params['lookback_interval'],
-            'confidence_interval': params['confidence_interval']
+            'confidence_interval': params['confidence_interval'],
+            'arima_order': (params['arima_p'], params['arima_p'], params['arima_q'])
         }
         model_params = {
             'policy': params['policy'],
@@ -42,7 +43,8 @@ def load_params():
             'reward_len': 4,
             'forecast_len': 8,
             'lookback_interval': 50,
-            'confidence_interval': 0.738
+            'confidence_interval': 0.738,
+            'arima_order': (0, 1, 0)
         }
         model_params = {
             'policy': 'MlpPolicy',
