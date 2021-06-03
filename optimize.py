@@ -69,7 +69,7 @@ def optimize_env(trial):
         'confidence_interval': trial.suggest_uniform('confidence_interval', 0.7, 0.99),
         'arima_p': trial.suggest_int('arima_p', 0, 1),
         'arima_d': trial.suggest_int('arima_d', 0, 1),
-        'arima_p': trial.suggest_int('arima_q', 0, 1)
+        'arima_q': trial.suggest_int('arima_q', 0, 1)
     }
 
 
@@ -92,6 +92,11 @@ def initialize_envs(env_params):
     test_df = df[slice_point:]
     train_df.reset_index(drop=True, inplace=True)
     test_df.reset_index(drop=True, inplace=True)
+
+    env_params['arima_order'] = (env_params['arima_p'], env_params['arima_d'], env_params['arima_q'])
+    del env_params['arima_p']
+    del env_params['arima_d']
+    del env_params['arima_q']
 
     train_env = DummyVecEnv([lambda: CryptoTradingEnv(train_df, coins, max_initial_balance, **env_params)])
     validation_env = DummyVecEnv([lambda: CryptoTradingEnv(test_df, coins, max_initial_balance, **env_params)])
