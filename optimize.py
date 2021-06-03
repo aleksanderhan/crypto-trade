@@ -12,11 +12,10 @@ from lib import get_data
 
 
 coins = ['btc', 'eth']
-start_time = '2021-03-01T00:00'
-end_time = '2021-05-01T00:00'
+start_time = '2021-01-01T00:00'
+end_time = '2021-02-01T00:00'
 training_split = 0.8
 max_initial_balance = 50000
-reward_func = 'simple'
 
 
 df = get_data(start_time, end_time, coins, 60)
@@ -62,8 +61,8 @@ def optimize_env(trial):
     return {
         'reward_func': trial.suggest_categorical('reward_func', ['sortino', 'calmar', 'omega', 'simple']),
         'reward_len': trial.suggest_int('reward_len', 2, 200),
-        'forecast_len': trial.suggest_int('forecast_len', 1, 50),
-        'lookback_interval': trial.suggest_int('lookback_interval', 10, 1000),
+        'forecast_len': trial.suggest_int('forecast_len', 1, 10),
+        'lookback_interval': trial.suggest_int('lookback_interval', 10, 50),
         'confidence_interval': trial.suggest_uniform('confidence_interval', 0.7, 0.99)
     }
 

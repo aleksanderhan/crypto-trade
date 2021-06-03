@@ -22,8 +22,9 @@ def test_model(model, env, render):
         action, _states = model.predict(obs)
         obs, reward, done, info = env.step(action)
         if render:
-            env.render(mode='console')
-        print(info[0]['current_step'], '/', info[0]['max_steps'], end="\r", flush=True)
+            env.render(mode='human')
+        else:
+            print(info[0]['current_step'], '/', info[0]['max_steps'], end="\r", flush=True)
 
     return info[0]['profit']
 
@@ -51,7 +52,7 @@ start_time = '2021-05-20T00:00'
 end_time = '2021-05-28T00:00'
 max_initial_balance = 10000
 episodes = 3
-render = True
+render = False
 
 
 if __name__ == '__main__':

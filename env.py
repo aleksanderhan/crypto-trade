@@ -68,7 +68,7 @@ class CryptoTradingEnv(gym.Env):
         self.observation_space = spaces.Box(
             low=-MAX_VALUE,
             high=MAX_VALUE, 
-            shape=((len(coins) * (6 + self.forecast_len*3) + 3),), # (num_coins * (portefolio value & candles & forecast_len*3) + (balance & net worth & timestamp))
+            shape=((len(coins) * (6 + self.forecast_len + 2*(self.forecast_len - 2)) + 3 + 2),), # (num_coins * (portefolio value & candles & forecast_len*3) + (balance & net worth & timestamp))
             dtype=np.float32
         )
 
@@ -81,7 +81,7 @@ class CryptoTradingEnv(gym.Env):
         #delay_modifier = (self.current_step / self.max_steps)
         #profit = self.get_profit()
 
-        obs, dt = self._next_observation()
+        obs = self._next_observation()
         reward = self._get_reward(self.reward_func)
         done = self.net_worth[-1] <= 0 or self.current_step >= self.max_steps
 
@@ -89,8 +89,7 @@ class CryptoTradingEnv(gym.Env):
             'current_step': self.current_step, 
             'last_trade': self._get_last_trade(),
             'profit': self.get_profit(),
-            'max_steps': self.max_steps,
-            'obs_dt': dt
+            'max_steps': self.max_steps
             }
 
 
@@ -191,6 +190,7 @@ class CryptoTradingEnv(gym.Env):
         t0 = perf_counter()
         frame = np.array([])
         for coin in self.coins:
+            # Price data
             open_values = self.df.loc[self.current_step - 1: self.current_step, coin + '_open'].values
             high_values = self.df.loc[self.current_step - 1: self.current_step, coin + '_high'].values
             low_values = self.df.loc[self.current_step - 1: self.current_step, coin + '_low'].values
@@ -202,20 +202,30 @@ class CryptoTradingEnv(gym.Env):
             frame = np.concatenate((frame, np.diff(np.log(close_values))))
             frame = np.concatenate((frame, np.diff(np.log(volume_values))))
 
+            # Portefolio
             frame = np.concatenate((frame, np.diff(np.log(np.array(self.portfolio[coin]) + 1)))) # +1 dealing with 0 log
 
+            # Forecast prediction
             forecast = self._get_forecast(coin)
-            frame = np.concatenate((frame, forecast.predicted_mean))
-            frame = np.concatenate((frame, forecast.conf_int().flatten()))
+            frame = np.concatenate((frame, np.diff(np.log(forecast.predicted_mean))))
 
+            # Forecast confidence interval
+            ci_start = forecast.conf_int().flatten()[0::2]
+            ci_end = forecast.conf_int().flatten()[1::2]
+            frame = np.concatenate((frame, np.diff(np.log(ci_start))))
+            frame = np.concatenate((frame, np.diff(np.log(ci_end))))
+
+        # Time
         timestamp_values = self.df.loc[self.current_step - 1: self.current_step, 'timestamp'].values
         frame = np.concatenate((frame, np.diff(np.log(timestamp_values))))
 
-        frame = np.concatenate((frame, np.diff(np.log(np.array(self.balance) + 1))))
+        # Net worth and balance
+        frame = np.concatenate((frame, np.diff(np.log(np.array(self.balance) + 1)))) # +1 dealing with 0 log
         frame = np.concatenate((frame, np.diff(np.log(self.net_worth[self.current_step-1:self.current_step+1]))))
         t1 = perf_counter()
+        #print('obs_dt', t1-t0)
 
-        return np.nan_to_num(frame, posinf=MAX_VALUE, neginf=-MAX_VALUE), t1-t0
+        return np.nan_to_num(frame, posinf=MAX_VALUE, neginf=-MAX_VALUE)
 
 
     def _get_forecast(self, coin):
@@ -224,7 +234,7 @@ class CryptoTradingEnv(gym.Env):
         if len(past_close_values) < 3: # Padding values at first frame
             past_close_values = np.insert(past_close_values, 0, past_close_values[0])
 
-        forecast_model = ARIMA(np.nan_to_num(np.diff(np.log(past_close_values))),
+        forecast_model = ARIMA(past_close_values,
             order=self.arima_order,
             enforce_stationarity=False,
             enforce_invertibility=False)
