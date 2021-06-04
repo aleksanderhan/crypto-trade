@@ -5,10 +5,11 @@ import random
 from time import perf_counter
 import warnings
 
-from stable_baselines import PPO2
-from stable_baselines.common import make_vec_env
-from stable_baselines.common.policies import MlpLstmPolicy
-from stable_baselines.common.vec_env import DummyVecEnv, SubprocVecEnv
+from stable_baselines3 import PPO
+from stable_baselines3.common.env_util import make_vec_env
+from stable_baselines3.common.vec_env import SubprocVecEnv, DummyVecEnv
+from stable_baselines3.common.evaluation import evaluate_policy
+from stable_baselines3.common.env_checker import check_env
 
 from env import CryptoTradingEnv
 from test import run_n_test
@@ -21,6 +22,7 @@ coins = ['btc', 'eth'] #'link', 'ada', 'algo', 'nmr', 'xlm'] # 'FIL', 'STORJ', '
 coins_str = ','.join(coins)
 start_time = '2021-01-01T00:00'
 end_time = '2021-02-01T00:00'
+policy = 'MlpPolicy'
 epochs = 30
 episodes = 1000
 max_initial_balance = 50000
@@ -30,8 +32,6 @@ n_envs=8
 
 if __name__ == '__main__':
     env_params, model_params = load_params()
-    policy = model_params['policy']
-    del model_params['policy']
     
     df = get_data(start_time, end_time, coins)
 
@@ -59,12 +59,12 @@ if __name__ == '__main__':
         )
 
         
-        model = PPO2(policy,
+        model = PPO(policy,
                     train_env, 
                     verbose=1, 
-                    noptepochs=epochs,
-                    nminibatches=n_envs,
+                    n_epochs=epochs,
                     tensorboard_log='./tensorboard/',
+                    device='cpu',
                     **model_params)
 
         model_name = model.__class__.__name__

@@ -75,6 +75,7 @@ class CryptoTradingEnv(gym.Env):
 
 
     def step(self, action):
+        t0 = perf_counter()
         # Execute one time step within the environment
         self._take_action(action)
         self.current_step += 1
@@ -87,7 +88,8 @@ class CryptoTradingEnv(gym.Env):
 
         lost_90_percent_net_worth = float(self.net_worth[-1]) < (self.initial_balance / 10)
         done = lost_90_percent_net_worth or self.current_step >= self.max_steps
-
+        t1 = perf_counter()
+        print('step dt', t1-t0)
         return obs, reward, done, {
             'current_step': self.current_step, 
             'last_trade': self._get_last_trade(),
@@ -227,7 +229,7 @@ class CryptoTradingEnv(gym.Env):
         frame.append(np.diff(np.log(np.array(self.balance) + 1))) # +1 dealing with 0 log
         frame.append(np.diff(np.log(self.net_worth[self.current_step-1:self.current_step+1])))
         t1 = perf_counter()
-        print('obs_dt', t1-t0)
+        #print('obs_dt', t1-t0)
 
         return np.nan_to_num(np.concatenate(frame), posinf=MAX_VALUE, neginf=-MAX_VALUE)
 

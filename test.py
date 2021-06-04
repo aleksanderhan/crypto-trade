@@ -7,11 +7,11 @@ import warnings
 import argparse
 from collections import deque
 
-from stable_baselines import PPO2
-from stable_baselines.common import make_vec_env
-from stable_baselines.common.policies import MlpPolicy, MlpLstmPolicy
-from stable_baselines.common.vec_env import DummyVecEnv, SubprocVecEnv
-from stable_baselines.common.evaluation import evaluate_policy
+from stable_baselines3 import PPO
+from stable_baselines3.common.env_util import make_vec_env
+from stable_baselines3.common.vec_env import SubprocVecEnv, DummyVecEnv
+from stable_baselines3.common.evaluation import evaluate_policy
+from stable_baselines3.common.env_checker import check_env
 
 from env import CryptoTradingEnv
 from lib import get_data, load_params
@@ -45,7 +45,7 @@ def run_n_test(model, env, n, render=False):
 def load_model(fname, env, model_params):
     policy = model_params['policy']
     del model_params['policy']
-    model = PPO2(policy, env, nminibatches=1, **model_params)
+    model = PPO(policy, env, nminibatches=1, **model_params)
 
     if os.path.isfile(fname + '.zip'):
         model.load(fname)
