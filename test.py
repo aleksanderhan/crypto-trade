@@ -4,6 +4,7 @@ import pandas as pd
 import numpy as np
 import optuna
 import warnings
+import argparse
 from collections import deque
 
 from stable_baselines import PPO2
@@ -52,21 +53,25 @@ def load_model(fname, env, model_params):
     return model
 
 
-start_time = '2021-05-20T00:00'
-end_time = '2021-05-22T00:00'
+start_time = '2021-01-01T00:00'
+end_time = '2021-02-01T00:00'
 max_initial_balance = 10000
 episodes = 3
-render = False
 
 
 if __name__ == '__main__':
-    fname = sys.argv[1].split('.')[0]
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-r", action="store_true")
+    parser.add_argument('fname')
+    args = parser.parse_args()
+    print(args)
+
+    fname = args.fname
     policy = fname.split('-')[1]
     reward_func = fname.split('-')[2]
-    granularity = int(fname.split('-')[3].strip('g'))
     coins = fname.split('-')[-1].split(',')
 
-    data = get_data(start_time, end_time, coins, granularity)
+    data = get_data(start_time, end_time, coins)
     env_params, model_params = load_params()
 
     env = CryptoTradingEnv(data, coins, max_initial_balance, **env_params)
@@ -75,6 +80,7 @@ if __name__ == '__main__':
     
     model = load_model(fname, env, model_params)
 
-    evaluate_policy(model, env, deterministic=False, render=render, n_eval_episodes=episodes)
+    #mean_reward, std_reward = evaluate_policy(model, env, deterministic=False, render=args.r, n_eval_episodes=episodes)
+    #print('mean_reward:', mean_reward, 'std_reward', std_reward)
 
-    #run_n_test(model, env, episodes, render)
+    run_n_test(model, env, episodes, args.r)

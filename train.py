@@ -14,14 +14,13 @@ from env import CryptoTradingEnv
 from test import run_n_test
 from lib import get_data, load_params
 
-warnings.filterwarnings("ignore")
+#warnings.filterwarnings("ignore")
 
 
-coins = ['btc', 'eth'] #, 'ada', 'link', 'algo', 'nmr', 'xlm'] # 'FIL', 'STORJ', 'AAVE', 'COMP', 'LTC', 
+coins = ['btc', 'eth'] #'link', 'ada', 'algo', 'nmr', 'xlm'] # 'FIL', 'STORJ', 'AAVE', 'COMP', 'LTC', 
 coins_str = ','.join(coins)
-granularity = 60
-start_time = '2021-05-01T00:00'
-end_time = '2021-05-20T00:00'
+start_time = '2021-01-01T00:00'
+end_time = '2021-02-01T00:00'
 epochs = 30
 episodes = 1000
 max_initial_balance = 50000
@@ -34,7 +33,7 @@ if __name__ == '__main__':
     policy = model_params['policy']
     del model_params['policy']
     
-    df = get_data(start_time, end_time, coins, granularity)
+    df = get_data(start_time, end_time, coins)
 
     slice_point = int(len(df.index) * training_split)
     train_df = df[:slice_point]
@@ -70,7 +69,7 @@ if __name__ == '__main__':
 
         model_name = model.__class__.__name__
         reward_func = env_params['reward_func']
-        fname = f'{model_name}-{policy}-{reward_func}-g{granularity}-{coins_str}'
+        fname = f'{model_name}-{policy}-{reward_func}-{coins_str}'
         
         if os.path.isfile(fname + '.zip'):
             model.load(fname)  

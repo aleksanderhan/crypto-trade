@@ -11,20 +11,19 @@ from lib import get_data
 
 
 
-data = get_data('2021-05-20T00:00', '2021-05-20T12:00', ['btc'], 60)
+data = get_data('2021-02-01T00:00', '2021-02-02T00:00', ['eth'])
 
 
 x = data['timestamp'].values
-df = data['btc_close']
+df = data['eth_close']
 print(df)
-
 
 
 model = auto_arima(df,
                    start_P=0,
                    start_q=0,
-                   max_p=5,
-                   max_q=5,
+                   max_p=3,
+                   max_q=3,
                    seasonal=False,
                    d=1,
                    trace=True,
@@ -38,7 +37,7 @@ model.summary()
 
 t0 = perf_counter()
 forecast_model = ARIMA(df[:-100],
-                    order=(1, 0, 1),
+                    order=(0,1,0),
                     enforce_stationarity=False,
                     enforce_invertibility=False)
 t1 = perf_counter()
@@ -71,7 +70,7 @@ ci = yf.conf_int()
 
 ax = df[:-200].plot(label='observed', figsize=(20, 15))
 yf.predicted_mean.plot(ax=ax, label='Forecast')
-data['btc_close'][:].plot(ax=ax, label='actual')
+data['eth_close'][:].plot(ax=ax, label='actual')
 ax.fill_between(ci.index,
                 ci.iloc[:, 0],
                 ci.iloc[:, 1], color='k', alpha=.25)

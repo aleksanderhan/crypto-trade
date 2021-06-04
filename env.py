@@ -34,6 +34,7 @@ class CryptoTradingEnv(gym.Env):
                 forecast_len,
                 lookback_interval,
                 confidence_interval,
+                use_forecast,
                 arima_order=(0, 1, 0),
                 fee=0.005):
         
@@ -57,16 +58,18 @@ class CryptoTradingEnv(gym.Env):
         self.forecast_len = forecast_len
         self.lookback_interval = lookback_interval
         self.confidence_interval = confidence_interval
+        self.use_forecast = use_forecast
         self.arima_order = arima_order
 
         # Buy/sell/hold for each coin
         self.action_space = spaces.Box(low=np.array([-1, -1, -1], dtype=np.float16), high=np.array([1, 1, 1], dtype=np.float32), dtype=np.float32)
 
-        # prices over the last few days and portfolio status
+        
+        observation_space_len = (len(coins) * (6 + self.forecast_len + 2*(self.forecast_len - 2)) + 3 + 2) if self.use_forecast else len(coins) * 6 + 3
         self.observation_space = spaces.Box(
             low=-MAX_VALUE,
             high=MAX_VALUE, 
-            shape=((len(coins) * (6 + self.forecast_len + 2*(self.forecast_len - 2)) + 3 + 2),), # (num_coins * (portefolio value & candles & forecast_len*3) + (balance & net worth & timestamp))
+            shape=(observation_space_len,), # (num_coins * (portefolio value & candles & forecast_len*3) + (balance & net worth & timestamp))
             dtype=np.float32
         )
 
@@ -81,7 +84,9 @@ class CryptoTradingEnv(gym.Env):
 
         obs = self._next_observation()
         reward = self._get_reward(self.reward_func)
-        done = self.net_worth[-1] <= 0 or self.current_step >= self.max_steps
+
+        lost_90_percent_net_worth = float(self.net_worth[-1]) < (self.initial_balance / 10)
+        done = lost_90_percent_net_worth or self.current_step >= self.max_steps
 
         return obs, reward, done, {
             'current_step': self.current_step, 
@@ -203,15 +208,16 @@ class CryptoTradingEnv(gym.Env):
             # Portefolio
             frame.append(np.diff(np.log(np.array(self.portfolio[coin]) + 1))) # +1 dealing with 0 log
 
-            # Forecast prediction
-            forecast = self._get_forecast(coin)
-            frame.append(np.diff(np.log(forecast.predicted_mean)))
+            if self.use_forecast:
+                # Forecast prediction
+                forecast = self._get_forecast(coin)
+                frame.append(np.diff(np.log(forecast.predicted_mean)))
 
-            # Forecast confidence interval
-            ci_start = forecast.conf_int().flatten()[0::2]
-            ci_end = forecast.conf_int().flatten()[1::2]
-            frame.append(np.diff(np.log(ci_start)))
-            frame.append(np.diff(np.log(ci_end)))
+                # Forecast confidence interval
+                ci_start = forecast.conf_int().flatten()[0::2]
+                ci_end = forecast.conf_int().flatten()[1::2]
+                frame.append(np.diff(np.log(ci_start)))
+                frame.append(np.diff(np.log(ci_end)))
 
         # Time
         timestamp_values = self.df.loc[self.current_step - 1: self.current_step, 'timestamp'].values

@@ -3,9 +3,9 @@ import optuna
 import pandas as pd
 
 
-def get_data(start_time, end_time, coins, granularity):
+def get_data(start_time, end_time, coins):
     coinsStr = ','.join(coins)
-    r = requests.get(f'http://127.0.0.1:5000/data?start_time={start_time}&end_time={end_time}&coins={coinsStr}&granularity={granularity}')
+    r = requests.get(f'http://127.0.0.1:5000/data?start_time={start_time}&end_time={end_time}&coins={coinsStr}')
 
     df = pd.DataFrame.from_dict(r.json())
     print(df)
@@ -26,7 +26,8 @@ def load_params():
             'forecast_len': params['forecast_len'],
             'lookback_interval': params['lookback_interval'],
             'confidence_interval': params['confidence_interval'],
-            'arima_order': (params['arima_p'], params['arima_p'], params['arima_q'])
+            'arima_order': (params['arima_p'], params['arima_p'], params['arima_q']),
+            'use_forecast': params['use_forecast']
         }
         model_params = {
             'policy': params['policy'],
@@ -44,10 +45,11 @@ def load_params():
             'forecast_len': 8,
             'lookback_interval': 50,
             'confidence_interval': 0.738,
-            'arima_order': (0, 1, 0)
+            'arima_order': (0, 1, 0),
+            'use_forecast': True
         }
         model_params = {
-            'policy': 'MlpPolicy',
+            'policy': 'MlpLstmPolicy',
             'n_steps': 1849,
             'gamma': 0.988,
             'learning_rate': 0.0028,

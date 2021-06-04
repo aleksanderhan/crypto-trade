@@ -21,7 +21,7 @@ training_split = 0.8
 max_initial_balance = 50000
 
 
-df = get_data(start_time, end_time, coins, 60)
+df = get_data(start_time, end_time, coins)
 
 
 def optimize(n_trials=5000):
@@ -69,7 +69,8 @@ def optimize_env(trial):
         'confidence_interval': trial.suggest_uniform('confidence_interval', 0.7, 0.99),
         'arima_p': trial.suggest_int('arima_p', 0, 1),
         'arima_d': trial.suggest_int('arima_d', 0, 1),
-        'arima_q': trial.suggest_int('arima_q', 0, 1)
+        'arima_q': trial.suggest_int('arima_q', 0, 1),
+        'use_forecast': trial.suggest_categorical('use_forecast', [True, False])
     }
 
 
