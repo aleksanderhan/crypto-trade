@@ -17,4 +17,8 @@
 
 
 
-| time | btc_open | btc_close | ... | btc_volume | btc_amount | eth_open | ... | eth_volume | eth_amount | <coin>_keywords 
+| time | btc_open | btc_close | ... | btc_volume | btc_amount | eth_open | ... | eth_volume | eth_amount | ...
+
+## Tensorboard
+
+* https://towardsdatascience.com/a-quickstart-guide-to-tensorboard-fb1ade69bbcf

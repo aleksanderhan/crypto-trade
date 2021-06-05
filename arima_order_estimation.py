@@ -11,7 +11,7 @@ from lib import get_data
 
 
 
-data = get_data('2021-02-01T00:00', '2021-02-02T00:00', ['eth'])
+data = get_data('2021-02-02T00:00', '2021-02-04T00:00', ['eth'])
 
 
 x = data['timestamp'].values
@@ -36,8 +36,8 @@ model.summary()
 
 
 t0 = perf_counter()
-forecast_model = ARIMA(df[:-100],
-                    order=(0,1,0),
+forecast_model = ARIMA(df[:-80],
+                    order=(1,0,1),
                     enforce_stationarity=False,
                     enforce_invertibility=False)
 t1 = perf_counter()
@@ -65,10 +65,10 @@ print(t5-t4)
 
 
 
-yf = model_fit.get_forecast(100, typ='levels')
+yf = model_fit.get_forecast(80, typ='levels')
 ci = yf.conf_int()
 
-ax = df[:-200].plot(label='observed', figsize=(20, 15))
+ax = df[:-80].plot(label='observed', figsize=(20, 15))
 yf.predicted_mean.plot(ax=ax, label='Forecast')
 data['eth_close'][:].plot(ax=ax, label='actual')
 ax.fill_between(ci.index,

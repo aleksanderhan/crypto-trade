@@ -27,7 +27,7 @@ def test_model(model, env, render):
         action, _states = model.predict(obs)
         obs, reward, done, info = env.step(action)
         if render:
-            env.render(mode='human')
+            env.render(mode=render)
         else:
             print(info[0]['current_step'], '/', info[0]['max_steps'], end="\r", flush=True)
 
@@ -59,7 +59,7 @@ episodes = 3
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument("-r", action="store_true")
+    parser.add_argument("-r")
     parser.add_argument('fname')
     args = parser.parse_args()
     print(args)
@@ -80,7 +80,7 @@ if __name__ == '__main__':
     
     model = load_model(fname, policy, env, model_params)
 
-    #mean_reward, std_reward = evaluate_policy(model, env, deterministic=False, render=args.r, n_eval_episodes=episodes)
+    #mean_reward, std_reward = evaluate_policy(model, env, deterministic=False, render=bool(args.r), n_eval_episodes=episodes)
     #print('mean_reward:', mean_reward, 'std_reward', std_reward)
 
     run_n_test(model, env, episodes, args.r)

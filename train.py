@@ -19,12 +19,12 @@ warnings.filterwarnings("ignore")
 
 
 coins = ['btc', 'eth'] #'link', 'ada', 'algo', 'nmr', 'xlm'] # 'FIL', 'STORJ', 'AAVE', 'COMP', 'LTC', 
-coins_str = ','.join(coins)
+coins_str = ','.join(sorted(coins))
 start_time = '2020-01-01T00:00'
 end_time = '2021-01-01T00:00'
 policy = 'MlpLstmPolicy'
 reward_func = 'sortino'
-training_iterations = 10
+training_iterations = 100
 epochs = 100
 max_initial_balance = 50000
 training_split = 0.9
@@ -53,8 +53,9 @@ if __name__ == '__main__':
     )
 
     for i in range(training_iterations):
-        start_frame = random.randint(0, int(len(train_df.index) * training_split))
-        end_frame = start_frame + int(len(train_df.index) * (1 - training_split))
+        start_frame = random.randint(0,  int(len(train_df.index*0.9)))
+        end_frame = start_frame + int(len(train_df.index*0.1))
+
         epochs_df = train_df[start_frame:end_frame]
         epochs_df.reset_index(drop=True, inplace=True)
 
@@ -68,7 +69,7 @@ if __name__ == '__main__':
             
         model = PPO2(policy,
                     train_env, 
-                    verbose=1, 
+                    verbose=2, 
                     noptepochs=10,
                     nminibatches=n_envs,
                     tensorboard_log='./tensorboard/',
