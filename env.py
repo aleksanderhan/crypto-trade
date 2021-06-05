@@ -2,6 +2,7 @@ import gym
 from gym import spaces
 import pandas as pd
 import numpy as np
+import matplotlib.pylab as plt
 import requests
 import json
 import random
@@ -63,13 +64,13 @@ class CryptoTradingEnv(gym.Env):
 
         # Buy/sell/hold for each coin
         self.action_space = spaces.Box(low=np.array([-1, -1, -1], dtype=np.float16), high=np.array([1, 1, 1], dtype=np.float32), dtype=np.float32)
-
         
-        observation_space_len = (len(coins) * (6 + self.forecast_len + 2*(self.forecast_len - 2)) + 3 + 2) if self.use_forecast else len(coins) * 6 + 3
+        # (num_coins * (portefolio value & candles & 3*(forecast_len-1)) + (balance & net worth & timestamp))
+        observation_space_len = (len(coins) * (6 + 3*(self.forecast_len - 1)) + 3) if self.use_forecast else len(coins) * 6 + 3
         self.observation_space = spaces.Box(
             low=-MAX_VALUE,
             high=MAX_VALUE, 
-            shape=(observation_space_len,), # (num_coins * (portefolio value & candles & forecast_len*3) + (balance & net worth & timestamp))
+            shape=(observation_space_len,),
             dtype=np.float32
         )
 
@@ -227,7 +228,7 @@ class CryptoTradingEnv(gym.Env):
         frame.append(np.diff(np.log(np.array(self.balance) + 1))) # +1 dealing with 0 log
         frame.append(np.diff(np.log(self.net_worth[self.current_step-1:self.current_step+1])))
         t1 = perf_counter()
-        print('obs_dt', t1-t0)
+        #print('obs_dt', t1-t0)
 
         return np.nan_to_num(np.concatenate(frame), posinf=MAX_VALUE, neginf=-MAX_VALUE)
 

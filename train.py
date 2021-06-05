@@ -9,27 +9,31 @@ from stable_baselines import PPO2
 from stable_baselines.common import make_vec_env
 from stable_baselines.common.policies import MlpLstmPolicy
 from stable_baselines.common.vec_env import DummyVecEnv, SubprocVecEnv
+from stable_baselines.common.env_checker import check_env
 
 from env import CryptoTradingEnv
 from test import run_n_test
 from lib import get_data, load_params
 
-#warnings.filterwarnings("ignore")
+warnings.filterwarnings("ignore")
 
 
 coins = ['btc', 'eth'] #'link', 'ada', 'algo', 'nmr', 'xlm'] # 'FIL', 'STORJ', 'AAVE', 'COMP', 'LTC', 
 coins_str = ','.join(coins)
 start_time = '2021-01-01T00:00'
 end_time = '2021-02-01T00:00'
-epochs = 30
-episodes = 1000
+training_iterations = 10
+epochs = 100
 max_initial_balance = 50000
 training_split = 0.9
-n_envs=8
+n_envs = 4
 
 
 if __name__ == '__main__':
     env_params, model_params = load_params()
+    print('env_params', env_params)
+    print('model_params', model_params)
+
     policy = model_params['policy']
     del model_params['policy']
     
@@ -40,29 +44,32 @@ if __name__ == '__main__':
     test_df = df[slice_point:]
     test_df.reset_index(drop=True, inplace=True)
 
+    validation_env = CryptoTradingEnv(test_df, coins, max_initial_balance, **env_params)
+    #check_env(validation_env, warn=True)
     validation_env = make_vec_env(
-        lambda: CryptoTradingEnv(test_df, coins, max_initial_balance, **env_params), 
+        lambda: validation_env, 
         n_envs=1,
         vec_env_cls=DummyVecEnv
     )
 
-    for e in range(episodes):
+    for i in range(training_iterations):
         start_frame = random.randint(0, int(len(train_df.index) * training_split))
         end_frame = start_frame + int(len(train_df.index) * (1 - training_split))
-        episode_df = train_df[start_frame:end_frame]
-        episode_df.reset_index(drop=True, inplace=True)
+        epochs_df = train_df[start_frame:end_frame]
+        epochs_df.reset_index(drop=True, inplace=True)
 
+        train_env = CryptoTradingEnv(epochs_df, coins, max_initial_balance, **env_params)
+        #check_env(train_env, warn=True)
         train_env = make_vec_env(
-            lambda: CryptoTradingEnv(episode_df, coins, max_initial_balance, **env_params), 
+            lambda: train_env, 
             n_envs=n_envs,
             vec_env_cls=SubprocVecEnv
         )
-
-        
+            
         model = PPO2(policy,
                     train_env, 
                     verbose=1, 
-                    noptepochs=epochs,
+                    noptepochs=10,
                     nminibatches=n_envs,
                     tensorboard_log='./tensorboard/',
                     **model_params)
@@ -70,19 +77,16 @@ if __name__ == '__main__':
         model_name = model.__class__.__name__
         reward_func = env_params['reward_func']
         fname = f'{model_name}-{policy}-{reward_func}-{coins_str}'
-        
         if os.path.isfile(fname + '.zip'):
             model.load(fname)  
 
+        for e in range(epochs):
+            t0 = perf_counter()
+            model.learn(total_timesteps=len(epochs_df.index) - 1)
+            model.save(fname)
+            t1 = perf_counter()
 
-        t0 = perf_counter()
-        for _ in range(3):
-            model.learn(total_timesteps=len(episode_df.index) - 1)
-        t1 = perf_counter()
-        
-        model.save(fname)
-
-        print(e, 'training time:', t1 - t0)
+            print('iteration:', i, 'epoch:', e, 'training time:', t1 - t0)
 
 
     run_n_test(model, validation_env, 5, False)

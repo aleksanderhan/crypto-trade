@@ -27,7 +27,7 @@ def test_model(model, env, render):
         action, _states = model.predict(obs)
         obs, reward, done, info = env.step(action)
         if render:
-            env.render(mode='console')
+            env.render(mode='human')
         else:
             print(info[0]['current_step'], '/', info[0]['max_steps'], end="\r", flush=True)
 
@@ -54,7 +54,7 @@ def load_model(fname, env, model_params):
 
 
 start_time = '2021-01-01T00:00'
-end_time = '2021-02-01T00:00'
+end_time = '2021-01-02T00:00'
 max_initial_balance = 10000
 episodes = 3
 
@@ -66,7 +66,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
     print(args)
 
-    fname = args.fname
+    fname = args.fname.split('.')[0]
     policy = fname.split('-')[1]
     reward_func = fname.split('-')[2]
     coins = fname.split('-')[-1].split(',')
