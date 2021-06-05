@@ -39,20 +39,20 @@ def load_params(study_name):
         }
     except:
         env_params = {
-            'reward_len': 4,
-            'forecast_len': 8,
-            'lookback_interval': 50,
-            'confidence_interval': 0.738,
-            'arima_order': (0, 1, 0),
+            'reward_len': 3,
+            'forecast_len': 1,
+            'lookback_interval': 32,
+            'confidence_interval': 0.8460604699339368,
+            'arima_order': (1, 0, 1),
             'use_forecast': True
         }
         model_params = {
-            'n_steps': 1849,
-            'gamma': 0.988,
-            'learning_rate': 0.0028,
-            'ent_coef': 0.0001738,
-            'cliprange': 0.24178,
-            'lam': 0.933
+            'n_steps': 1212,
+            'gamma': 0.9875622908741607,
+            'learning_rate': 0.11727616345950494,
+            'ent_coef': 2.5017991913510806e-07,
+            'cliprange': 0.3193524886168006,
+            'lam': 0.9940652382030966
         }
 
     return env_params, model_params

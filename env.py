@@ -63,7 +63,7 @@ class CryptoTradingEnv(gym.Env):
         self.arima_order = arima_order
 
         # Buy/sell/hold for each coin
-        self.action_space = spaces.Box(low=np.array([-1, -1, -1], dtype=np.float16), high=np.array([1, 1, 1], dtype=np.float32), dtype=np.float32)
+        self.action_space = spaces.Box(low=np.array([-1, -1, -1], dtype=np.float32), high=np.array([1, 1, 1], dtype=np.float32), dtype=np.float32)
         
         # (num_coins * (portefolio value & candles & 3*(forecast_len-1)) + (balance & net worth & timestamp))
         observation_space_len = (len(coins) * (6 + 3*(self.forecast_len - 1)) + 3) if self.use_forecast else len(coins) * 6 + 3

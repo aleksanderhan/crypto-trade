@@ -20,8 +20,8 @@ warnings.filterwarnings("ignore")
 
 coins = ['btc', 'eth'] #'link', 'ada', 'algo', 'nmr', 'xlm'] # 'FIL', 'STORJ', 'AAVE', 'COMP', 'LTC', 
 coins_str = ','.join(coins)
-start_time = '2021-01-01T00:00'
-end_time = '2021-02-01T00:00'
+start_time = '2020-01-01T00:00'
+end_time = '2021-01-01T00:00'
 policy = 'MlpLstmPolicy'
 reward_func = 'sortino'
 training_iterations = 10
