@@ -42,9 +42,7 @@ def run_n_test(model, env, n, render=False):
     print('Profit:', np.mean(profit), ' +/-', np.std(profit))
 
 
-def load_model(fname, env, model_params):
-    policy = model_params['policy']
-    del model_params['policy']
+def load_model(fname, policy, env, model_params):
     model = PPO2(policy, env, nminibatches=1, **model_params)
 
     if os.path.isfile(fname + '.zip'):
@@ -72,13 +70,15 @@ if __name__ == '__main__':
     coins = fname.split('-')[-1].split(',')
 
     data = get_data(start_time, end_time, coins)
-    env_params, model_params = load_params()
 
-    env = CryptoTradingEnv(data, coins, max_initial_balance, **env_params)
+    study_name = f'{policy}_{reward_func}'
+    env_params, model_params = load_params(study_name)
+
+    env = CryptoTradingEnv(data, coins, max_initial_balance, reward_func, **env_params)
     env = make_vec_env(lambda: env, n_envs=1, vec_env_cls=DummyVecEnv)
 
     
-    model = load_model(fname, env, model_params)
+    model = load_model(fname, policy, env, model_params)
 
     #mean_reward, std_reward = evaluate_policy(model, env, deterministic=False, render=args.r, n_eval_episodes=episodes)
     #print('mean_reward:', mean_reward, 'std_reward', std_reward)

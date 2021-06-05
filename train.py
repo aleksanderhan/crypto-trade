@@ -22,6 +22,8 @@ coins = ['btc', 'eth'] #'link', 'ada', 'algo', 'nmr', 'xlm'] # 'FIL', 'STORJ', '
 coins_str = ','.join(coins)
 start_time = '2021-01-01T00:00'
 end_time = '2021-02-01T00:00'
+policy = 'MlpLstmPolicy'
+reward_func = 'sortino'
 training_iterations = 10
 epochs = 100
 max_initial_balance = 50000
@@ -30,12 +32,10 @@ n_envs = 4
 
 
 if __name__ == '__main__':
-    env_params, model_params = load_params()
+    study = f'{policy}_{reward_func}'
+    env_params, model_params = load_params(study)
     print('env_params', env_params)
     print('model_params', model_params)
-
-    policy = model_params['policy']
-    del model_params['policy']
     
     df = get_data(start_time, end_time, coins)
 
@@ -44,7 +44,7 @@ if __name__ == '__main__':
     test_df = df[slice_point:]
     test_df.reset_index(drop=True, inplace=True)
 
-    validation_env = CryptoTradingEnv(test_df, coins, max_initial_balance, **env_params)
+    validation_env = CryptoTradingEnv(test_df, coins, max_initial_balance, reward_func, **env_params)
     #check_env(validation_env, warn=True)
     validation_env = make_vec_env(
         lambda: validation_env, 
@@ -58,7 +58,7 @@ if __name__ == '__main__':
         epochs_df = train_df[start_frame:end_frame]
         epochs_df.reset_index(drop=True, inplace=True)
 
-        train_env = CryptoTradingEnv(epochs_df, coins, max_initial_balance, **env_params)
+        train_env = CryptoTradingEnv(epochs_df, coins, max_initial_balance, reward_func, **env_params)
         #check_env(train_env, warn=True)
         train_env = make_vec_env(
             lambda: train_env, 
@@ -75,7 +75,6 @@ if __name__ == '__main__':
                     **model_params)
 
         model_name = model.__class__.__name__
-        reward_func = env_params['reward_func']
         fname = f'{model_name}-{policy}-{reward_func}-{coins_str}'
         if os.path.isfile(fname + '.zip'):
             model.load(fname)  

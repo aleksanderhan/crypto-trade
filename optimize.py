@@ -17,6 +17,8 @@ warnings.filterwarnings("ignore")
 coins = ['btc', 'eth']
 start_time = '2021-01-01T00:00'
 end_time = '2021-02-01T00:00'
+policy = 'MlpLstmPolicy'
+reward_func = 'sortino'
 training_split = 0.8
 max_initial_balance = 50000
 
@@ -25,7 +27,7 @@ df = get_data(start_time, end_time, coins)
 
 
 def optimize(n_trials=5000):
-    study = optuna.create_study(study_name='optimize_profit', storage='sqlite:///params.db', load_if_exists=True)
+    study = optuna.create_study(study_name=f'{policy}_{reward_func}', storage='sqlite:///params.db', load_if_exists=True)
     study.optimize(objective_fn, n_trials=n_trials)
 
 
@@ -34,9 +36,7 @@ def objective_fn(trial):
     model_params = optimize_ppo2(trial)
 
     train_env, validation_env = initialize_envs(env_params)
-
-    policy = model_params['policy']
-    del model_params['policy']
+    
     model = PPO2(policy, train_env, nminibatches=1, **model_params)
 
     train_maxlen = len(train_env.get_attr('df')[0].index) - 1
@@ -62,7 +62,6 @@ def objective_fn(trial):
 
 def optimize_env(trial):
     return {
-        'reward_func': trial.suggest_categorical('reward_func', ['sortino', 'calmar', 'omega', 'simple']),
         'reward_len': trial.suggest_int('reward_len', 2, 200),
         'forecast_len': trial.suggest_int('forecast_len', 1, 10),
         'lookback_interval': trial.suggest_int('lookback_interval', 10, 50),
@@ -76,7 +75,6 @@ def optimize_env(trial):
 
 def optimize_ppo2(trial):
     return {
-        'policy': trial.suggest_categorical('policy', ['MlpPolicy', 'MlpLstmPolicy', 'MlpLnLstmPolicy']),
         'n_steps': trial.suggest_int('n_steps', 16, 2048),
         'gamma': trial.suggest_loguniform('gamma', 0.9, 0.9999),
         'learning_rate': trial.suggest_loguniform('learning_rate', 1e-5, 1.),
@@ -99,8 +97,8 @@ def initialize_envs(env_params):
     del env_params['arima_d']
     del env_params['arima_q']
 
-    train_env = DummyVecEnv([lambda: CryptoTradingEnv(train_df, coins, max_initial_balance, **env_params)])
-    validation_env = DummyVecEnv([lambda: CryptoTradingEnv(test_df, coins, max_initial_balance, **env_params)])
+    train_env = DummyVecEnv([lambda: CryptoTradingEnv(train_df, coins, max_initial_balance, reward_func, **env_params)])
+    validation_env = DummyVecEnv([lambda: CryptoTradingEnv(test_df, coins, max_initial_balance, reward_func, **env_params)])
 
     return train_env, validation_env
 

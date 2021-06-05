@@ -13,15 +13,14 @@ def get_data(start_time, end_time, coins):
     return df
 
 
-def load_params():
+def load_params(study_name):
     try:
-        study = optuna.load_study(study_name='optimize_profit', storage='sqlite:///params.db')
+        study = optuna.load_study(study_name=study_name, storage='sqlite:///params.db')
 
         params = study.best_trial.params
         print(params)
 
         env_params = {
-            'reward_func': params['reward_func'],
             'reward_len': params['reward_len'],
             'forecast_len': params['forecast_len'],
             'lookback_interval': params['lookback_interval'],
@@ -40,7 +39,6 @@ def load_params():
         }
     except:
         env_params = {
-            'reward_func': 'sortino',
             'reward_len': 4,
             'forecast_len': 8,
             'lookback_interval': 50,
@@ -49,7 +47,6 @@ def load_params():
             'use_forecast': True
         }
         model_params = {
-            'policy': 'MlpLstmPolicy',
             'n_steps': 1849,
             'gamma': 0.988,
             'learning_rate': 0.0028,

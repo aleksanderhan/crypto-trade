@@ -76,6 +76,7 @@ class CryptoTradingEnv(gym.Env):
 
 
     def step(self, action):
+        t0 = perf_counter()
         # Execute one time step within the environment
         self._take_action(action)
         self.current_step += 1
@@ -89,12 +90,15 @@ class CryptoTradingEnv(gym.Env):
         lost_90_percent_net_worth = float(self.net_worth[-1]) < (self.initial_balance / 10)
         done = lost_90_percent_net_worth or self.current_step >= self.max_steps
 
-        return obs, reward, done, {
+        info = {
             'current_step': self.current_step, 
             'last_trade': self._get_last_trade(),
             'profit': self.get_profit(),
             'max_steps': self.max_steps
-            }
+        }
+        t1 = perf_counter()
+        #print('step dt', t1-t0)
+        return obs, reward, done, info
 
 
     def reset(self):
@@ -126,7 +130,7 @@ class CryptoTradingEnv(gym.Env):
         elif self.reward_func == 'omega':
             reward = omega_ratio(returns)
         elif self.reward_func == 'simple':
-            reward = returns[-1]
+            reward = np.mean(returns)
         else:
             raise NotImplementedError
 
