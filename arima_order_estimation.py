@@ -11,12 +11,18 @@ from lib import get_data
 
 
 
-data = get_data('2021-02-02T00:00', '2021-02-04T00:00', ['eth'])
-
+data = get_data('2021-02-02T00:00', '2021-02-03T00:00', ['eth'])
+print()
 
 x = data['timestamp'].values
 df = data['eth_close']
 print(df)
+
+lookback_interval = 3
+
+
+print(df.loc[0:lookback_interval])
+print(df.at[lookback_interval])
 
 
 model = auto_arima(df,
@@ -32,44 +38,18 @@ model = auto_arima(df,
                    stepwise=True)
 
 model.summary()
-#params = model.get_params()
+
+forecast, conf_int = model.predict(n_periods=10, return_conf_int=True)
 
 
-t0 = perf_counter()
-forecast_model = ARIMA(df[:-80],
-                    order=(1,0,1),
-                    enforce_stationarity=False,
-                    enforce_invertibility=False)
-t1 = perf_counter()
-print(t1-t0)
+print(forecast)
+print(conf_int)
 
-model_fit = forecast_model.fit()
-t2 = perf_counter()
-print(t2-t1)
+ci = pd.DataFrame(conf_int)
 
-'''
-arima = pm.ARIMA(order=params['order'])
-t3 = perf_counter()
-print(t3-t2)
-
-
-
-arima.fit(df[:-200])
-t4 = perf_counter()
-print(t4-t3)
-
-model.predict(200)
-t5 = perf_counter()
-print(t5-t4)
-'''
-
-
-
-yf = model_fit.get_forecast(80, typ='levels')
-ci = yf.conf_int()
 
 ax = df[:-80].plot(label='observed', figsize=(20, 15))
-yf.predicted_mean.plot(ax=ax, label='Forecast')
+pd.DataFrame(forecast).plot(ax=ax, label='Forecast')
 data['eth_close'][:].plot(ax=ax, label='actual')
 ax.fill_between(ci.index,
                 ci.iloc[:, 0],
@@ -82,40 +62,4 @@ plt.show()
 
 
 
-
-
-
-
-
-
-
-'''
-
-df = np.array([-0.00021112, -0.0005432 ])
-
-
-sarimax_model = SARIMAX(df,order=(1, 0, 1),
-              seasonal_order=(2, 1, 0, 12),
-              enforce_stationarity=False,
-              enforce_invertibility=False)
-
-arima_model = ARIMA(df,order=(1, 0, 1),
-              enforce_stationarity=False,
-              enforce_invertibility=False)
-
-t0 = perf_counter()
-sarimax_model.fit(method='bfgs', disp=False,    )
-t1 = perf_counter()
-sarimax_model.fit(method='lbfgs', disp=False, start_params=[0, 0, 0, 1, 1])
-t2 = perf_counter()
-sarimax_model.fit(method='lbfgs', disp=False, start_params=[0, 0, 0, 1, 1], simple_differencing = True)
-t3 = perf_counter()
-arima_model.fit(start_params=[0, 0, 0, 1, 1])
-t4 = perf_counter()
-
-print(t1-t0)
-print(t2-t1)
-print(t3-t2)
-print(t4-t3)
-'''
 

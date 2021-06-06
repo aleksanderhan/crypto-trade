@@ -3,14 +3,13 @@ from gym import spaces
 import pandas as pd
 import numpy as np
 import matplotlib.pylab as plt
+import pmdarima as pm
 import requests
 import json
 import random
 import warnings
 from collections import deque
 from empyrical import sortino_ratio, calmar_ratio, omega_ratio
-from statsmodels.tsa.arima.model import ARIMA
-from statsmodels.tools.sm_exceptions import ConvergenceWarning
 from time import perf_counter
 
 from visualize import TradingGraph
@@ -41,32 +40,39 @@ class CryptoTradingEnv(gym.Env):
         
         super(CryptoTradingEnv, self).__init__()
 
-        self.max_initial_balance = max_initial_balance
-        self.initial_balance = random.randint(1000, max_initial_balance)
         self.df = df.fillna(method='bfill')
+        self.visualization = None
         self.coins = coins
         self.max_steps = len(df.index) - 1
         self.fee = fee
-        self.visualization = None
-        self.current_step = 1
-        self.portfolio = {}
+        
+        self.max_initial_balance = max_initial_balance
+        self.initial_balance = random.randint(1000, max_initial_balance)
+        self.current_step = lookback_interval
         self.max_net_worth = self.initial_balance
+        
+        self.portfolio = {}
         self.balance = deque(maxlen=2)
         self.net_worth = []
         self.trades = []
+
+        # Reward
         self.reward_func = reward_func
         self.reward_len = reward_len
+
+        # Forecast
         self.forecast_len = forecast_len
         self.lookback_interval = lookback_interval
         self.confidence_interval = confidence_interval
         self.use_forecast = use_forecast
         self.arima_order = arima_order
+        self.arima_models = {}
 
         # Buy/sell/hold for each coin
         self.action_space = spaces.Box(low=np.array([-1, -1, -1], dtype=np.float32), high=np.array([1, 1, 1], dtype=np.float32), dtype=np.float32)
         
         # (num_coins * (portefolio value & candles & 3*(forecast_len-1)) + (balance & net worth & timestamp))
-        observation_space_len = (len(coins) * (6 + 3*(self.forecast_len - 1)) + 3) if self.use_forecast else len(coins) * 6 + 3
+        observation_space_len = (len(coins) * (6 + 3*(self.forecast_len - 1)) + 3) -1 if self.use_forecast else len(coins) * 6 + 3
         self.observation_space = spaces.Box(
             low=-MAX_VALUE,
             high=MAX_VALUE, 
@@ -103,7 +109,7 @@ class CryptoTradingEnv(gym.Env):
 
     def reset(self):
         # Set the current step to a random point within the data frame
-        self.current_step = 1
+        self.current_step = self.lookback_interval
         self.initial_balance = random.randint(1000, self.max_initial_balance)
         self.max_net_worth = self.initial_balance
         self.trades = []
@@ -116,6 +122,14 @@ class CryptoTradingEnv(gym.Env):
         for i in range(2):
             self.balance.append(self.initial_balance)
             self.net_worth.append(self.initial_balance)
+
+        for coin in self.coins:
+            past_close_values = self.df.loc[0 : self.lookback_interval - 1, coin + '_close'].values
+            arima = pm.auto_arima(past_close_values, 
+                                start_p=1, start_q=1, d=0, max_p=5, max_q=5, 
+                                suppress_warnings=True, stepwise=True, error_action='ignore')
+
+            self.arima_models[coin] = arima
 
         return self._next_observation()
 
@@ -215,12 +229,14 @@ class CryptoTradingEnv(gym.Env):
 
             if self.use_forecast:
                 # Forecast prediction
-                forecast = self._get_forecast(coin)
-                frame.append(np.diff(np.log(forecast.predicted_mean)))
+                forecast, conf_int = self._get_forecast(coin)
+                print('forecast', forecast)
+                print('conf_int', conf_int)
+                frame.append(np.diff(np.log(forecast)))
 
                 # Forecast confidence interval
-                ci_start = forecast.conf_int().flatten()[0::2]
-                ci_end = forecast.conf_int().flatten()[1::2]
+                ci_start = conf_int.flatten()[0::2]
+                ci_end = conf_int.flatten()[1::2]
                 frame.append(np.diff(np.log(ci_start)))
                 frame.append(np.diff(np.log(ci_end)))
 
@@ -232,27 +248,23 @@ class CryptoTradingEnv(gym.Env):
         frame.append(np.diff(np.log(np.array(self.balance) + 1))) # +1 dealing with 0 log
         frame.append(np.diff(np.log(self.net_worth[self.current_step-1:self.current_step+1])))
         t1 = perf_counter()
-        #print('obs_dt', t1-t0)
-
-        return np.nan_to_num(np.concatenate(frame), posinf=MAX_VALUE, neginf=-MAX_VALUE)
+        print('obs_dt', t1-t0)
+        obs = np.nan_to_num(np.concatenate(frame), posinf=MAX_VALUE, neginf=-MAX_VALUE)
+        print(obs)
+        print('len obs', len(obs))
+        print()
+        return obs
 
 
     def _get_forecast(self, coin):
-        past_close_values = self.df.loc[self.current_step - self.lookback_interval: self.current_step, coin + '_close'].values
+        new_observation = self.df.at[self.current_step, coin + '_close']
+        
+        self.arima_models[coin].update(new_observation)
+        forecast, conf_int = self.arima_models[coin].predict(n_periods=self.forecast_len, 
+                                                            return_conf_int=True, 
+                                                            alpha=(1 - self.confidence_interval))
 
-        if len(past_close_values) < 3: # Padding values at first frame
-            past_close_values = np.insert(past_close_values, 0, past_close_values[0])
-
-        forecast_model = ARIMA(past_close_values,
-            order=self.arima_order,
-            enforce_stationarity=False,
-            enforce_invertibility=False,
-            missing='drop')
-
-        model_fit = forecast_model.fit(start_params=[0, 0, 0, 0, 1, 1])
-        forecast = model_fit.get_forecast(steps=self.forecast_len, alpha=(1 - self.confidence_interval), typ='levels')
-
-        return forecast
+        return forecast, conf_int
 
 
     def _calculate_net_worth(self):
