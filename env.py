@@ -9,8 +9,6 @@ import random
 import warnings
 from collections import deque
 from empyrical import sortino_ratio, calmar_ratio, omega_ratio
-from statsmodels.tsa.arima.model import ARIMA
-from statsmodels.tools.sm_exceptions import ConvergenceWarning
 from time import perf_counter
 
 from visualize import TradingGraph
@@ -32,11 +30,6 @@ class CryptoTradingEnv(gym.Env):
                 max_initial_balance, 
                 reward_func,
                 reward_len,
-                forecast_len,
-                lookback_interval,
-                confidence_interval,
-                use_forecast,
-                arima_order=(0, 1, 0),
                 fee=0.005):
         
         super(CryptoTradingEnv, self).__init__()
@@ -56,17 +49,12 @@ class CryptoTradingEnv(gym.Env):
         self.trades = []
         self.reward_func = reward_func
         self.reward_len = reward_len
-        self.forecast_len = forecast_len
-        self.lookback_interval = lookback_interval
-        self.confidence_interval = confidence_interval
-        self.use_forecast = use_forecast
-        self.arima_order = arima_order
 
         # Buy/sell/hold for each coin
         self.action_space = spaces.Box(low=np.array([-1, -1, -1], dtype=np.float32), high=np.array([1, 1, 1], dtype=np.float32), dtype=np.float32)
         
-        # (num_coins * (portefolio value & candles & 3*(forecast_len-1)) + (balance & net worth & timestamp))
-        observation_space_len = (len(coins) * (6 + 3*(self.forecast_len - 1)) + 3) if self.use_forecast else len(coins) * 6 + 3
+        # (num_coins * (portefolio value & candles) + (balance & net worth & timestamp))
+        observation_space_len = len(coins) * 6 + 3
         self.observation_space = spaces.Box(
             low=-MAX_VALUE,
             high=MAX_VALUE, 
@@ -213,19 +201,6 @@ class CryptoTradingEnv(gym.Env):
             # Portefolio
             frame.append(np.diff(np.log(np.array(self.portfolio[coin]) + 1))) # +1 dealing with 0 log
 
-            if self.use_forecast:
-                # Forecast prediction
-                forecast = self._get_forecast(coin)
-                frame.append(np.diff(np.log(forecast.predicted_mean)))
-                print(forecast.predicted_mean)
-                print(forecast.conf_int())
-
-                # Forecast confidence interval
-                ci_start = forecast.conf_int().flatten()[0::2]
-                ci_end = forecast.conf_int().flatten()[1::2]
-                frame.append(np.diff(np.log(ci_start)))
-                frame.append(np.diff(np.log(ci_end)))
-
         # Time
         timestamp_values = self.df.loc[self.current_step - 1: self.current_step, 'timestamp'].values
         frame.append(np.diff(np.log(timestamp_values)))
@@ -236,27 +211,7 @@ class CryptoTradingEnv(gym.Env):
         t1 = perf_counter()
         #print('obs_dt', t1-t0)
 
-        obs = np.nan_to_num(np.concatenate(frame), posinf=MAX_VALUE, neginf=-MAX_VALUE)
-        print(obs)
-        return obs
-
-
-    def _get_forecast(self, coin):
-        past_close_values = self.df.loc[self.current_step - self.lookback_interval: self.current_step, coin + '_close'].values
-
-        if len(past_close_values) < 3: # Padding values at first frame
-            past_close_values = np.insert(past_close_values, 0, past_close_values[0])
-
-        forecast_model = ARIMA(past_close_values,
-            order=self.arima_order,
-            enforce_stationarity=False,
-            enforce_invertibility=False,
-            missing='drop')
-
-        model_fit = forecast_model.fit(start_params=[0, 0, 0, 0, 1, 1])
-        forecast = model_fit.get_forecast(steps=self.forecast_len, alpha=(1 - self.confidence_interval), typ='levels')
-
-        return forecast
+        return np.nan_to_num(np.concatenate(frame), posinf=MAX_VALUE, neginf=-MAX_VALUE)
 
 
     def _calculate_net_worth(self):

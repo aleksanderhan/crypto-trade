@@ -18,7 +18,7 @@ from lib import get_data, load_params
 warnings.filterwarnings("ignore")
 
 
-coins = ['btc', 'eth'] #'link', 'ada', 'algo', 'nmr', 'xlm'] # 'FIL', 'STORJ', 'AAVE', 'COMP', 'LTC', 
+coins = ['aave', 'ada', 'algo', 'ankr', 'btc', 'comp', 'dot', 'eth', 'fil', 'icp', 'link', 'ltc', 'matic', 'nmr', 'snx', 'storj', 'sushi', 'uni', 'xlm', 'yfi'] 
 coins_str = ','.join(sorted(coins))
 start_time = '2020-01-01T00:00'
 end_time = '2021-01-01T00:00'
@@ -89,4 +89,4 @@ if __name__ == '__main__':
             print('iteration:', i, 'epoch:', e, 'training time:', t1 - t0)
 
 
-    run_n_test(model, validation_env, 5, False)
+        run_n_test(model, validation_env, 5, False)
