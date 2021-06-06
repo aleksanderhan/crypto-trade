@@ -217,8 +217,8 @@ class CryptoTradingEnv(gym.Env):
                 # Forecast prediction
                 forecast = self._get_forecast(coin)
                 frame.append(np.diff(np.log(forecast.predicted_mean)))
-                print(forecast.predicted_mean)
-                print(forecast.conf_int())
+                #print(forecast.predicted_mean)
+                #print(forecast.conf_int())
 
                 # Forecast confidence interval
                 ci_start = forecast.conf_int().flatten()[0::2]
