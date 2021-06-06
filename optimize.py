@@ -14,7 +14,8 @@ from lib import get_data
 warnings.filterwarnings("ignore")
 
 
-coins = ['btc', 'eth']
+coins = ['aave', 'algo', 'btc', 'comp', 'eth', 'fil', 'link', 'ltc', 'nmr', 'snx', 'uni', 'xlm', 'yfi']
+coins_str = ','.join(sorted(coins))
 start_time = '2021-01-01T00:00'
 end_time = '2021-02-01T00:00'
 policy = 'MlpLstmPolicy'
@@ -27,7 +28,7 @@ df = get_data(start_time, end_time, coins)
 
 
 def optimize(n_trials=5000):
-    study = optuna.create_study(study_name=f'{policy}_{reward_func}', storage='sqlite:///params.db', load_if_exists=True)
+    study = optuna.create_study(study_name=f'{policy}_{reward_func}_{coins_str}', storage='sqlite:///params.db', load_if_exists=True)
     study.optimize(objective_fn, n_trials=n_trials)
 
 

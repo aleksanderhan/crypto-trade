@@ -18,10 +18,10 @@ from lib import get_data, load_params
 warnings.filterwarnings("ignore")
 
 
-coins = ['aave', 'ada', 'algo', 'ankr', 'btc', 'comp', 'dot', 'eth', 'fil', 'icp', 'link', 'ltc', 'matic', 'nmr', 'snx', 'storj', 'sushi', 'uni', 'xlm', 'yfi'] 
+coins = ['aave', 'algo', 'btc', 'comp', 'eth', 'fil', 'link', 'ltc', 'nmr', 'snx', 'uni', 'xlm', 'yfi']
 coins_str = ','.join(sorted(coins))
 start_time = '2020-01-01T00:00'
-end_time = '2021-01-01T00:00'
+end_time = '2021-05-31T00:00'
 policy = 'MlpLstmPolicy'
 reward_func = 'sortino'
 training_iterations = 100

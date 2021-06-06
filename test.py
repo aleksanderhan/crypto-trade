@@ -51,8 +51,8 @@ def load_model(fname, policy, env, model_params):
     return model
 
 
-start_time = '2021-01-01T00:00'
-end_time = '2021-01-02T00:00'
+start_time = '2021-06-01T00:00'
+end_time = '2021-06-06T00:00'
 max_initial_balance = 10000
 episodes = 1
 
