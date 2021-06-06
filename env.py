@@ -45,10 +45,9 @@ class CryptoTradingEnv(gym.Env):
         self.portfolio = {}
         self.max_net_worth = self.initial_balance
         self.balance = deque(maxlen=2)
-        self.net_worth = []
+        self.net_worth = deque(maxlen=reward_len)
         self.trades = []
         self.reward_func = reward_func
-        self.reward_len = reward_len
 
         # Buy/sell/hold for each coin
         self.action_space = spaces.Box(low=np.array([-1, -1, -1], dtype=np.float32), high=np.array([1, 1, 1], dtype=np.float32), dtype=np.float32)
@@ -68,9 +67,6 @@ class CryptoTradingEnv(gym.Env):
         # Execute one time step within the environment
         self._take_action(action)
         self.current_step += 1
-
-        #delay_modifier = (self.current_step / self.max_steps)
-        #profit = self.get_profit()
 
         obs = self._next_observation()
         reward = self._get_reward(self.reward_func)
@@ -109,7 +105,7 @@ class CryptoTradingEnv(gym.Env):
 
 
     def _get_reward(self, reward_func):        
-        returns = np.diff(self.net_worth[-self.reward_len:])
+        returns = np.diff(self.net_worth)
 
         if self.reward_func == 'sortino':
             reward = sortino_ratio(returns)
@@ -207,7 +203,7 @@ class CryptoTradingEnv(gym.Env):
 
         # Net worth and balance
         frame.append(np.diff(np.log(np.array(self.balance) + 1))) # +1 dealing with 0 log
-        frame.append(np.diff(np.log(self.net_worth[self.current_step-1:self.current_step+1])))
+        frame.append(np.diff(np.log([self.net_worth[-2], self.net_worth[-1]])))
         t1 = perf_counter()
         #print('obs_dt', t1-t0)
 

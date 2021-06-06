@@ -73,8 +73,8 @@ def optimize_ppo2(trial):
         'gamma': trial.suggest_loguniform('gamma', 0.9, 0.9999),
         'learning_rate': trial.suggest_loguniform('learning_rate', 1e-5, 1.),
         'ent_coef': trial.suggest_loguniform('ent_coef', 1e-8, 1e-1),
-        'cliprange': trial.suggest_uniform('clip_range', 0.1, 0.4),
-        'cliprange_vf': trial.suggest_uniform('clip_range', 0.1, 0.4),
+        'cliprange': trial.suggest_uniform('cliprange', 0.1, 0.4),
+        'cliprange_vf': trial.suggest_uniform('cliprange_vf', 0.1, 0.4),
         'lam': trial.suggest_uniform('lam', 0.8, 1.)
     }
 

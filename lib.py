@@ -30,21 +30,22 @@ def load_params(study_name):
             'gamma': params['gamma'],
             'learning_rate': params['learning_rate'],
             'ent_coef': params['ent_coef'],
-            'cliprange': params['clip_range'],
+            'cliprange': params['cliprange'],
             'lam': params['lam']
         }
     except:
         env_params = {
-            'reward_len': 3,
-            'reward_func': 'simple'
+            'reward_len': 30,
+            'reward_func': 'omega'
         }
         model_params = {
-            'n_steps': 1212,
-            'gamma': 0.9875622908741607,
-            'learning_rate': 0.11727616345950494,
-            'ent_coef': 2.5017991913510806e-07,
-            'cliprange': 0.3193524886168006,
-            'lam': 0.9940652382030966
+            'n_steps': 1480,
+            'gamma': 0.981031411815395,
+            'learning_rate': 0.077471274926592394,
+            'ent_coef': 1.786525334251195e-08,
+            'cliprange': 0.30701255220867096,
+            'cliprange_vf': 0.30701255220867096,
+            'lam': 0.9888716588160799
         }
 
     return env_params, model_params

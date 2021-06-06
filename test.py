@@ -68,10 +68,12 @@ if __name__ == '__main__':
     model_name = fname.split('-')[0]
     policy = fname.split('-')[1]
     coins = fname.split('-')[-1].split(',')
+    coins_str = ','.join(sorted(coins))
+
 
     data = get_data(start_time, end_time, coins)
 
-    study_name = f'{model_name}_{policy}_{reward_func}'
+    study_name = f'{model_name}_{policy}_{coins_str}'
     env_params, model_params = load_params(study_name)
 
     env = CryptoTradingEnv(data, coins, max_initial_balance, **env_params)
