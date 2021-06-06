@@ -64,7 +64,6 @@ def optimize_env(trial):
     return {
         'reward_len': trial.suggest_int('reward_len', 2, 200),
         'forecast_len': trial.suggest_int('forecast_len', 2, 10),
-        'lookback_interval': trial.suggest_int('lookback_interval', 10, 50),
         'confidence_interval': trial.suggest_uniform('confidence_interval', 0.7, 0.99),
         'arima_p': trial.suggest_int('arima_p', 0, 1),
         'arima_d': trial.suggest_int('arima_d', 0, 1),

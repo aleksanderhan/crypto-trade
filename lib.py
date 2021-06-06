@@ -23,7 +23,6 @@ def load_params(study_name):
         env_params = {
             'reward_len': params['reward_len'],
             'forecast_len': params['forecast_len'],
-            'lookback_interval': params['lookback_interval'],
             'confidence_interval': params['confidence_interval'],
             'arima_order': (params['arima_p'], params['arima_p'], params['arima_q']),
             'use_forecast': params['use_forecast']
@@ -41,7 +40,6 @@ def load_params(study_name):
         env_params = {
             'reward_len': 3,
             'forecast_len': 2,
-            'lookback_interval': 32,
             'confidence_interval': 0.8460604699339368,
             'arima_order': (1, 0, 1),
             'use_forecast': True

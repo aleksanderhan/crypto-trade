@@ -32,9 +32,9 @@ class CryptoTradingEnv(gym.Env):
                 reward_func,
                 reward_len,
                 forecast_len,
-                lookback_interval,
                 confidence_interval,
                 use_forecast,
+                initial_step=100,
                 arima_order=(0, 1, 0),
                 fee=0.005):
         
@@ -48,7 +48,8 @@ class CryptoTradingEnv(gym.Env):
         
         self.max_initial_balance = max_initial_balance
         self.initial_balance = random.randint(1000, max_initial_balance)
-        self.current_step = lookback_interval
+        self.initial_step = initial_step
+        self.current_step = initial_step
         self.max_net_worth = self.initial_balance
         
         self.portfolio = {}
@@ -62,7 +63,6 @@ class CryptoTradingEnv(gym.Env):
 
         # Forecast
         self.forecast_len = forecast_len
-        self.lookback_interval = lookback_interval
         self.confidence_interval = confidence_interval
         self.use_forecast = use_forecast
         self.arima_order = arima_order
@@ -72,13 +72,15 @@ class CryptoTradingEnv(gym.Env):
         self.action_space = spaces.Box(low=np.array([-1, -1, -1], dtype=np.float32), high=np.array([1, 1, 1], dtype=np.float32), dtype=np.float32)
         
         # (num_coins * (portefolio value & candles & 3*(forecast_len-1)) + (balance & net worth & timestamp))
-        observation_space_len = (len(coins) * (6 + 3*(self.forecast_len - 1)) + 3) -1 if self.use_forecast else len(coins) * 6 + 3
+        observation_space_len = (len(coins) * (6 + 3*(self.forecast_len - 1)) + 3) if self.use_forecast else len(coins) * 6 + 3
         self.observation_space = spaces.Box(
             low=-MAX_VALUE,
             high=MAX_VALUE, 
             shape=(observation_space_len,),
             dtype=np.float32
         )
+
+        self.reset()
 
 
     def step(self, action):
@@ -109,7 +111,7 @@ class CryptoTradingEnv(gym.Env):
 
     def reset(self):
         # Set the current step to a random point within the data frame
-        self.current_step = self.lookback_interval
+        self.current_step = self.initial_step
         self.initial_balance = random.randint(1000, self.max_initial_balance)
         self.max_net_worth = self.initial_balance
         self.trades = []
@@ -119,12 +121,12 @@ class CryptoTradingEnv(gym.Env):
             for i in range(2):
                 self.portfolio[coin].append(0)
 
-        for i in range(2):
+        for i in range(self.initial_step):
             self.balance.append(self.initial_balance)
             self.net_worth.append(self.initial_balance)
 
         for coin in self.coins:
-            past_close_values = self.df.loc[0 : self.lookback_interval - 1, coin + '_close'].values
+            past_close_values = self.df.loc[0 : self.initial_step - 1, coin + '_close'].values
             arima = pm.auto_arima(past_close_values, 
                                 start_p=1, start_q=1, d=0, max_p=5, max_q=5, 
                                 suppress_warnings=True, stepwise=True, error_action='ignore')
@@ -218,6 +220,11 @@ class CryptoTradingEnv(gym.Env):
             low_values = self.df.loc[self.current_step - 1: self.current_step, coin + '_low'].values
             close_values = self.df.loc[self.current_step - 1: self.current_step, coin + '_close'].values
             volume_values = self.df.loc[self.current_step - 1: self.current_step, coin + '_volume'].values
+            #print(f'open_values {coin}', len(open_values))
+            #print(f'high_values {coin}', len(high_values))
+            #print(f'low_values {coin}', len(low_values))
+            #print(f'close_values {coin}', len(close_values))
+            #print(f'volume_values {coin}', len(volume_values))
             frame.append(np.diff(np.log(open_values)))
             frame.append(np.diff(np.log(high_values)))
             frame.append(np.diff(np.log(low_values)))
@@ -226,33 +233,38 @@ class CryptoTradingEnv(gym.Env):
 
             # Portefolio
             frame.append(np.diff(np.log(np.array(self.portfolio[coin]) + 1))) # +1 dealing with 0 log
-
+            #print(f'portefolio {coin}', len(self.portfolio[coin]))
             if self.use_forecast:
                 # Forecast prediction
                 forecast, conf_int = self._get_forecast(coin)
-                print('forecast', forecast)
-                print('conf_int', conf_int)
                 frame.append(np.diff(np.log(forecast)))
+                #print(f'forecast {coin}', len(forecast))
 
                 # Forecast confidence interval
                 ci_start = conf_int.flatten()[0::2]
                 ci_end = conf_int.flatten()[1::2]
                 frame.append(np.diff(np.log(ci_start)))
                 frame.append(np.diff(np.log(ci_end)))
+                #print(f'ci_start {coin}', len(ci_start))
+                #print(f'ci_end {coin}', len(ci_end))
 
         # Time
         timestamp_values = self.df.loc[self.current_step - 1: self.current_step, 'timestamp'].values
         frame.append(np.diff(np.log(timestamp_values)))
+        #print('timestamp_values', len(timestamp_values))
 
         # Net worth and balance
         frame.append(np.diff(np.log(np.array(self.balance) + 1))) # +1 dealing with 0 log
         frame.append(np.diff(np.log(self.net_worth[self.current_step-1:self.current_step+1])))
+        #print('balance', len(self.balance))
+        #print('net_worth', len(self.net_worth[self.current_step-1:self.current_step+1]))
+
         t1 = perf_counter()
         print('obs_dt', t1-t0)
         obs = np.nan_to_num(np.concatenate(frame), posinf=MAX_VALUE, neginf=-MAX_VALUE)
-        print(obs)
-        print('len obs', len(obs))
-        print()
+        #print(obs)
+        #print('len obs', len(obs))
+        #print()
         return obs
 
 
