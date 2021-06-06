@@ -108,7 +108,7 @@ class CryptoTradingEnv(gym.Env):
         return self._next_observation()
 
 
-    def _get_reward(self, reward_func=None):        
+    def _get_reward(self, reward_func):        
         returns = np.diff(self.net_worth[-self.reward_len:])
 
         if self.reward_func == 'sortino':

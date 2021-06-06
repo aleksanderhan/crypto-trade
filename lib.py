@@ -21,7 +21,8 @@ def load_params(study_name):
         print(params)
 
         env_params = {
-            'reward_len': params['reward_len']
+            'reward_len': params['reward_len'],
+            'reward_func': params['reward_func']
         }
         model_params = {
             'policy': params['policy'],
@@ -34,7 +35,8 @@ def load_params(study_name):
         }
     except:
         env_params = {
-            'reward_len': 3
+            'reward_len': 3,
+            'reward_func': 'simple'
         }
         model_params = {
             'n_steps': 1212,

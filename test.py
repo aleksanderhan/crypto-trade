@@ -65,16 +65,16 @@ if __name__ == '__main__':
     print(args)
 
     fname = args.fname.split('.')[0]
+    model_name = fname.split('-')[0]
     policy = fname.split('-')[1]
-    reward_func = fname.split('-')[2]
     coins = fname.split('-')[-1].split(',')
 
     data = get_data(start_time, end_time, coins)
 
-    study_name = f'{policy}_{reward_func}'
+    study_name = f'{model_name}_{policy}_{reward_func}'
     env_params, model_params = load_params(study_name)
 
-    env = CryptoTradingEnv(data, coins, max_initial_balance, reward_func, **env_params)
+    env = CryptoTradingEnv(data, coins, max_initial_balance, **env_params)
     env = make_vec_env(lambda: env, n_envs=1, vec_env_cls=DummyVecEnv)
 
     

@@ -19,7 +19,6 @@ coins_str = ','.join(sorted(coins))
 start_time = '2021-01-01T00:00'
 end_time = '2021-02-01T00:00'
 policy = 'MlpLstmPolicy'
-reward_func = 'sortino'
 training_split = 0.8
 max_initial_balance = 50000
 
@@ -28,7 +27,7 @@ df = get_data(start_time, end_time, coins)
 
 
 def optimize(n_trials=5000):
-    study = optuna.create_study(study_name=f'{policy}_{reward_func}_{coins_str}', storage='sqlite:///params.db', load_if_exists=True)
+    study = optuna.create_study(study_name=f'PPO2_{policy}_{coins_str}', storage='sqlite:///params.db', load_if_exists=True)
     study.optimize(objective_fn, n_trials=n_trials)
 
 
@@ -49,21 +48,20 @@ def objective_fn(trial):
     if len(trades) < 1:
         raise optuna.structs.TrialPruned()
 
-    validation_maxlen = len(validation_env.get_attr('df')[0].index) - 1
     obs = validation_env.reset()
-    for i in range(validation_maxlen):
-        action, _states = model.predict(obs)
-        obs, reward, done, _ = validation_env.step(action)
+    while not done:
+        action, _states = model.predict(obs, deterministic=True)
+        obs, reward, done, info = validation_env.step(action)
         rewards.append(reward)
-        if done:
-            break
 
-    return -np.mean(rewards)
+    initial_balance = train_env.get_attr('initial_balance')[0]
+    return -(info['profit']/initial_balance)
 
 
 def optimize_env(trial):
     return {
         'reward_len': trial.suggest_int('reward_len', 2, 200),
+        'reward_func': trial.suggest_categorical('reward_func', ['sortino', 'calmar', 'omega', 'simple'])
     }
 
 
@@ -86,8 +84,8 @@ def initialize_envs(env_params):
     train_df.reset_index(drop=True, inplace=True)
     test_df.reset_index(drop=True, inplace=True)
 
-    train_env = DummyVecEnv([lambda: CryptoTradingEnv(train_df, coins, max_initial_balance, reward_func, **env_params)])
-    validation_env = DummyVecEnv([lambda: CryptoTradingEnv(test_df, coins, max_initial_balance, reward_func, **env_params)])
+    train_env = DummyVecEnv([lambda: CryptoTradingEnv(train_df, coins, max_initial_balance, **env_params)])
+    validation_env = DummyVecEnv([lambda: CryptoTradingEnv(test_df, coins, max_initial_balance, **env_params)])
 
     return train_env, validation_env
 
