@@ -217,6 +217,8 @@ class CryptoTradingEnv(gym.Env):
                 # Forecast prediction
                 forecast = self._get_forecast(coin)
                 frame.append(np.diff(np.log(forecast.predicted_mean)))
+                print(forecast.predicted_mean)
+                print(forecast.conf_int())
 
                 # Forecast confidence interval
                 ci_start = forecast.conf_int().flatten()[0::2]
@@ -234,7 +236,9 @@ class CryptoTradingEnv(gym.Env):
         t1 = perf_counter()
         #print('obs_dt', t1-t0)
 
-        return np.nan_to_num(np.concatenate(frame), posinf=MAX_VALUE, neginf=-MAX_VALUE)
+        obs = np.nan_to_num(np.concatenate(frame), posinf=MAX_VALUE, neginf=-MAX_VALUE)
+        print(obs)
+        return obs
 
 
     def _get_forecast(self, coin):

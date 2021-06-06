@@ -54,7 +54,7 @@ def load_model(fname, policy, env, model_params):
 start_time = '2021-01-01T00:00'
 end_time = '2021-01-02T00:00'
 max_initial_balance = 10000
-episodes = 3
+episodes = 1
 
 
 if __name__ == '__main__':

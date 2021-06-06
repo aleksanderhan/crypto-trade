@@ -40,7 +40,7 @@ def load_params(study_name):
     except:
         env_params = {
             'reward_len': 3,
-            'forecast_len': 1,
+            'forecast_len': 2,
             'lookback_interval': 32,
             'confidence_interval': 0.8460604699339368,
             'arima_order': (1, 0, 1),
