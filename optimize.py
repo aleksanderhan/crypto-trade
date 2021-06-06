@@ -2,45 +2,45 @@ import requests
 import pandas as pd
 import numpy as np
 import optuna
+import warnings
 
-from stable_baselines3 import PPO
-from stable_baselines3.common.env_util import make_vec_env
-from stable_baselines3.common.vec_env import DummyVecEnv
+from stable_baselines import PPO2
+from stable_baselines.common import make_vec_env
+from stable_baselines.common.vec_env import DummyVecEnv
 
 from env import CryptoTradingEnv
 from lib import get_data
 
+warnings.filterwarnings("ignore")
 
-coins = ['btc', 'eth']
-start_time = '2021-03-01T00:00'
-end_time = '2021-05-01T00:00'
+
+coins = ['aave', 'algo', 'btc', 'comp', 'eth', 'fil', 'link', 'ltc', 'nmr', 'snx', 'uni', 'xlm', 'yfi']
+coins_str = ','.join(sorted(coins))
+start_time = '2021-01-01T00:00'
+end_time = '2021-02-01T00:00'
+policy = 'MlpLstmPolicy'
 training_split = 0.8
 max_initial_balance = 50000
-reward_func = 'simple'
 
 
-df = get_data(start_time, end_time, coins, 60)
+df = get_data(start_time, end_time, coins)
 
 
 def optimize(n_trials=5000):
-    study = optuna.create_study(study_name='optimize_profit', storage='sqlite:///params.db', load_if_exists=True)
+    study = optuna.create_study(study_name=f'PPO2_{policy}_{coins_str}', storage='sqlite:///params.db', load_if_exists=True)
     study.optimize(objective_fn, n_trials=n_trials)
 
 
 def objective_fn(trial):
-    env_params = optimize_envs(trial)
-    model_params = optimize_ppo(trial)
+    env_params = optimize_env(trial)
+    model_params = optimize_ppo2(trial)
 
     train_env, validation_env = initialize_envs(env_params)
+    
+    model = PPO2(policy, train_env, nminibatches=1, **model_params)
 
-    model = PPO('MlpPolicy',
-                train_env, 
-                device='cpu',
-                batch_size=model_params['n_steps'], # https://github.com/DLR-RM/stable-baselines3/issues/440
-                **model_params)
-
-    train_df = train_env.get_attr('df')[0]
-    model.learn(len(train_df.index) - env_params['frame_size'])
+    train_maxlen = len(train_env.get_attr('df')[0].index) - 1
+    model.learn(train_maxlen)
 
     rewards, done = [], False
 
@@ -49,30 +49,31 @@ def objective_fn(trial):
         raise optuna.structs.TrialPruned()
 
     obs = validation_env.reset()
-    for i in range(len(validation_env.get_attr('df')[0].index)):
-        action, _states = model.predict(obs)
-        obs, reward, done, _ = validation_env.step(action)
+    while not done:
+        action, _states = model.predict(obs, deterministic=True)
+        obs, reward, done, info = validation_env.step(action)
         rewards.append(reward)
-        if done:
-            break
 
-    return -np.mean(rewards)
+    initial_balance = train_env.get_attr('initial_balance')[0]
+    return -(info['profit']/initial_balance)
 
 
-def optimize_ppo(trial):
+def optimize_env(trial):
     return {
-        'n_steps': int(trial.suggest_uniform('n_steps', 16, 2048)),
-        'gamma': trial.suggest_loguniform('gamma', 0.9, 0.9999),
-        'learning_rate': trial.suggest_loguniform('learning_rate', 1e-5, 1.),
-        'ent_coef': trial.suggest_loguniform('ent_coef', 1e-8, 1e-1),
-        'clip_range': trial.suggest_loguniform('clip_range', 0.1, 0.4),
-        'clip_range_vf': trial.suggest_loguniform('clip_range_vf', 0.1, .4)
+        'reward_len': trial.suggest_int('reward_len', 2, 200),
+        'reward_func': trial.suggest_categorical('reward_func', ['sortino', 'calmar', 'omega', 'simple'])
     }
 
 
-def optimize_envs(trial):
+def optimize_ppo2(trial):
     return {
-        'frame_size': int(trial.suggest_uniform('frame_size', 10, 2000)),
+        'n_steps': trial.suggest_int('n_steps', 16, 2048),
+        'gamma': trial.suggest_loguniform('gamma', 0.9, 0.9999),
+        'learning_rate': trial.suggest_loguniform('learning_rate', 1e-5, 1.),
+        'ent_coef': trial.suggest_loguniform('ent_coef', 1e-8, 1e-1),
+        'cliprange': trial.suggest_uniform('clip_range', 0.1, 0.4),
+        'cliprange_vf': trial.suggest_uniform('clip_range', 0.1, 0.4),
+        'lam': trial.suggest_uniform('lam', 0.8, 1.)
     }
 
 
@@ -83,8 +84,8 @@ def initialize_envs(env_params):
     train_df.reset_index(drop=True, inplace=True)
     test_df.reset_index(drop=True, inplace=True)
 
-    train_env = DummyVecEnv([lambda: CryptoTradingEnv(train_df, coins, max_initial_balance, reward_func, **env_params)])
-    validation_env = DummyVecEnv([lambda: CryptoTradingEnv(test_df, coins, max_initial_balance, reward_func, **env_params)])
+    train_env = DummyVecEnv([lambda: CryptoTradingEnv(train_df, coins, max_initial_balance, **env_params)])
+    validation_env = DummyVecEnv([lambda: CryptoTradingEnv(test_df, coins, max_initial_balance, **env_params)])
 
     return train_env, validation_env
 

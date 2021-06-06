@@ -2,13 +2,19 @@ import gym
 from gym import spaces
 import pandas as pd
 import numpy as np
+import matplotlib.pylab as plt
 import requests
 import json
 import random
+import warnings
 from collections import deque
 from empyrical import sortino_ratio, calmar_ratio, omega_ratio
+from time import perf_counter
 
 from visualize import TradingGraph
+
+warnings.filterwarnings("ignore")
+
 
 LOOKBACK_WINDOW_SIZE = 100
 MAX_VALUE = 3.4e38 # ~Max float 32
@@ -22,42 +28,43 @@ class CryptoTradingEnv(gym.Env):
                 df, 
                 coins, 
                 max_initial_balance, 
-                reward_func, 
-                frame_size=50, 
+                reward_func,
+                reward_len,
                 fee=0.005):
         
         super(CryptoTradingEnv, self).__init__()
 
-        self.frame_size = frame_size
         self.max_initial_balance = max_initial_balance
         self.initial_balance = random.randint(1000, max_initial_balance)
-        self.df = df
+        self.df = df.fillna(method='bfill')
         self.coins = coins
-        self.max_steps = len(df.index) - frame_size
+        self.max_steps = len(df.index) - 1
         self.fee = fee
         self.visualization = None
-        self.current_step = frame_size
+        self.current_step = 1
         self.portfolio = {}
         self.max_net_worth = self.initial_balance
-        self.balance = deque(maxlen=frame_size)
-        self.net_worth = deque(maxlen=frame_size)
-        self.training = True
+        self.balance = deque(maxlen=2)
+        self.net_worth = []
         self.trades = []
         self.reward_func = reward_func
+        self.reward_len = reward_len
 
         # Buy/sell/hold for each coin
-        self.action_space = spaces.Box(low=np.array([-1, -1, -1], dtype=np.float16), high=np.array([1, 1, 1], dtype=np.float16), dtype=np.float16)
-
-        # prices over the last few days and portfolio status
+        self.action_space = spaces.Box(low=np.array([-1, -1, -1], dtype=np.float32), high=np.array([1, 1, 1], dtype=np.float32), dtype=np.float32)
+        
+        # (num_coins * (portefolio value & candles) + (balance & net worth & timestamp))
+        observation_space_len = len(coins) * 6 + 3
         self.observation_space = spaces.Box(
             low=-MAX_VALUE,
             high=MAX_VALUE, 
-            shape=((len(coins) * 6 + 3) * (frame_size-1),), # (num_coins * (portefolio value & candles) + (balance & net worth & timestamp)) * frame_size -1
+            shape=(observation_space_len,),
             dtype=np.float32
         )
 
 
     def step(self, action):
+        t0 = perf_counter()
         # Execute one time step within the environment
         self._take_action(action)
         self.current_step += 1
@@ -67,59 +74,62 @@ class CryptoTradingEnv(gym.Env):
 
         obs = self._next_observation()
         reward = self._get_reward(self.reward_func)
-        done = self.net_worth[-1] <= 0 or self.current_step >= self.max_steps
 
-        return obs, reward, done, {
+        lost_90_percent_net_worth = float(self.net_worth[-1]) < (self.initial_balance / 10)
+        done = lost_90_percent_net_worth or self.current_step >= self.max_steps
+
+        info = {
             'current_step': self.current_step, 
             'last_trade': self._get_last_trade(),
             'profit': self.get_profit(),
             'max_steps': self.max_steps
-            }
+        }
+        t1 = perf_counter()
+        #print('step dt', t1-t0)
+        return obs, reward, done, info
 
 
-    def reset(self, training=True):
+    def reset(self):
         # Set the current step to a random point within the data frame
-        self.current_step = self.frame_size
+        self.current_step = 1
         self.initial_balance = random.randint(1000, self.max_initial_balance)
         self.max_net_worth = self.initial_balance
         self.trades = []
 
         for coin in self.coins:
-            self.portfolio[coin] = deque(maxlen=self.frame_size)
-            for _ in range(self.frame_size):
+            self.portfolio[coin] = deque(maxlen=2)
+            for i in range(2):
                 self.portfolio[coin].append(0)
 
-        for _ in range(self.frame_size):
+        for i in range(2):
             self.balance.append(self.initial_balance)
             self.net_worth.append(self.initial_balance)
 
         return self._next_observation()
 
 
-    def _get_reward(self, reward_func=None):        
-        returns = np.diff(self.net_worth)
+    def _get_reward(self, reward_func):        
+        returns = np.diff(self.net_worth[-self.reward_len:])
 
-        if reward_func == 'simple':
-            reward = np.mean(returns)
-        elif reward_func == 'sortino':
+        if self.reward_func == 'sortino':
             reward = sortino_ratio(returns)
-        elif reward_func == 'calmar':
+        elif self.reward_func == 'calmar':
             reward = calmar_ratio(returns)
-        elif reward_func == 'omega':
+        elif self.reward_func == 'omega':
             reward = omega_ratio(returns)
-        elif reward_func == 'custom':
-            reward = np.average(
-                [sortino_ratio(returns), calmar_ratio(returns), omega_ratio(returns)], [1, 1, 1])
+        elif self.reward_func == 'simple':
+            reward = np.mean(returns)
         else:
-            reward = returns[-1]
+            raise NotImplementedError
 
         return reward if not np.isinf(reward) and not np.isnan(reward) else 0
 
 
     def _take_action(self, action):
+        action = np.nan_to_num(action, posinf=1, neginf=-1)
         action_type = action[0]
         amount = 0.5*(action[1] - 1) + 1 # https://tiagoolivoto.github.io/metan/reference/resca.html
-        
+
         coin_action = ((len(self.coins) - 1) / 2) * (action[2] - 1) + len(self.coins) - 1
         coin = self.coins[int(coin_action)]
 
@@ -173,28 +183,35 @@ class CryptoTradingEnv(gym.Env):
 
 
     def _next_observation(self):
-        frame = np.array([])
+        t0 = perf_counter()
+        frame = []
         for coin in self.coins:
-            open_values = self.df.loc[self.current_step - self.frame_size +1: self.current_step, coin + '_open'].values
-            high_values = self.df.loc[self.current_step - self.frame_size +1: self.current_step, coin + '_high'].values
-            low_values = self.df.loc[self.current_step - self.frame_size +1: self.current_step, coin + '_low'].values
-            close_values = self.df.loc[self.current_step - self.frame_size +1: self.current_step, coin + '_close'].values
-            volume_values = self.df.loc[self.current_step - self.frame_size +1: self.current_step, coin + '_volume'].values
+            # Price data
+            open_values = self.df.loc[self.current_step - 1: self.current_step, coin + '_open'].values
+            high_values = self.df.loc[self.current_step - 1: self.current_step, coin + '_high'].values
+            low_values = self.df.loc[self.current_step - 1: self.current_step, coin + '_low'].values
+            close_values = self.df.loc[self.current_step - 1: self.current_step, coin + '_close'].values
+            volume_values = self.df.loc[self.current_step - 1: self.current_step, coin + '_volume'].values
+            frame.append(np.diff(np.log(open_values)))
+            frame.append(np.diff(np.log(high_values)))
+            frame.append(np.diff(np.log(low_values)))
+            frame.append(np.diff(np.log(close_values)))
+            frame.append(np.diff(np.log(volume_values)))
 
-            frame = np.concatenate((frame, np.diff(np.log(open_values))))
-            frame = np.concatenate((frame, np.diff(np.log(high_values))))
-            frame = np.concatenate((frame, np.diff(np.log(low_values))))
-            frame = np.concatenate((frame, np.diff(np.log(close_values))))
-            frame = np.concatenate((frame, np.diff(np.log(volume_values))))
+            # Portefolio
+            frame.append(np.diff(np.log(np.array(self.portfolio[coin]) + 1))) # +1 dealing with 0 log
 
-            frame = np.concatenate((frame, np.diff(np.log(self.portfolio[coin]))))
+        # Time
+        timestamp_values = self.df.loc[self.current_step - 1: self.current_step, 'timestamp'].values
+        frame.append(np.diff(np.log(timestamp_values)))
 
-        timestamp_values = self.df.loc[self.current_step - self.frame_size +1: self.current_step, 'timestamp'].values
-        frame = np.concatenate((frame, np.diff(np.log(timestamp_values))))
+        # Net worth and balance
+        frame.append(np.diff(np.log(np.array(self.balance) + 1))) # +1 dealing with 0 log
+        frame.append(np.diff(np.log(self.net_worth[self.current_step-1:self.current_step+1])))
+        t1 = perf_counter()
+        #print('obs_dt', t1-t0)
 
-        frame = np.concatenate((frame, np.diff(np.log(self.balance))))
-        frame = np.concatenate((frame, np.diff(np.log(self.net_worth))))
-        return np.nan_to_num(frame, posinf=MAX_VALUE, neginf=-MAX_VALUE)
+        return np.nan_to_num(np.concatenate(frame), posinf=MAX_VALUE, neginf=-MAX_VALUE)
 
 
     def _calculate_net_worth(self):
@@ -223,6 +240,7 @@ class CryptoTradingEnv(gym.Env):
         if mode == 'console':
             for coin in self.coins:
                 print(coin, self.portfolio[coin][-1])
+
             print(f'Last_trade: {self._get_last_trade()}')
             print(f'Step: {self.current_step} of {self.max_steps}')
             print(f'Balance: {self.balance[-1]} (Initial balance: {self.initial_balance})')
@@ -237,6 +255,7 @@ class CryptoTradingEnv(gym.Env):
             
             if self.current_step > LOOKBACK_WINDOW_SIZE:        
                 self.visualization.render(self.current_step, self.net_worth[-1], self.trades, window_size=LOOKBACK_WINDOW_SIZE)
+
             print(f'Step: {self.current_step} of {self.max_steps}')
             print(f'Balance: {self.balance[-1]} (Initial balance: {self.initial_balance})')
             print(f'Net worth: {self.net_worth[-1]} (Max net worth: {self.max_net_worth})')
