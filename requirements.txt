@@ -3,4 +3,3 @@ tensorflow==1.15.0
 matplotlib==3.2.2
 empyrical
 optuna
-statsmodels
