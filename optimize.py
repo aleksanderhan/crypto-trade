@@ -42,20 +42,22 @@ def objective_fn(trial):
     train_maxlen = len(train_env.get_attr('df')[0].index) - 1
     model.learn(train_maxlen)
 
-    rewards, done = [], False
 
     trades = train_env.get_attr('trades')[0]
     if len(trades) < 1:
         raise optuna.structs.TrialPruned()
 
+
+    done = False
     obs = validation_env.reset()
     while not done:
         action, _states = model.predict(obs, deterministic=True)
         obs, reward, done, info = validation_env.step(action)
-        rewards.append(reward)
 
-    initial_balance = train_env.get_attr('initial_balance')[0]
-    return -(info['profit']/initial_balance)
+    initial_balance = validation_env.get_attr('initial_balance')[0]
+    profit = info[0]['profit']
+
+    return -(profit/initial_balance)
 
 
 def optimize_env(trial):
