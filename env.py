@@ -148,7 +148,6 @@ class CryptoTradingEnv(gym.Env):
                     self.positions[coin].put((current_price, coins_bought))
                     bought = coins_bought
                     while bought > 0:
-                        print('bought', bought)
                         if not self.sales[coin].empty():
                             sold_price, sold_amount = self.sales[coin].get() # NB! negative values
                             if bought > abs(sold_amount):
@@ -186,7 +185,6 @@ class CryptoTradingEnv(gym.Env):
                     self.sales[coin].put((-current_price, -coins_sold))
                     liquidate = coins_sold
                     while liquidate > 0:
-                        print('liquidate', liquidate)
                         if not self.positions[coin].empty():
                             pos_price, pos_amount = self.positions[coin].get()
                             if liquidate > pos_amount:
