@@ -68,15 +68,10 @@ class CryptoTradingEnv(gym.Env):
     def step(self, action):
         t0 = perf_counter()
         # Execute one time step within the environment
-        print('*')
         reward = self._take_action(action)
-        print('**')
-
         self.current_step += 1
-        print(self.current_step)
 
         obs = self._next_observation()
-        print('***')
 
         lost_90_percent_net_worth = float(self.net_worth[-1]) < (self.initial_balance / 10)
         done = lost_90_percent_net_worth or self.current_step > self.max_steps
@@ -89,7 +84,6 @@ class CryptoTradingEnv(gym.Env):
         }
         t1 = perf_counter()
         #print('step dt', t1-t0)
-        print('reward', reward)
         return obs, reward, done, info
 
 
@@ -118,7 +112,6 @@ class CryptoTradingEnv(gym.Env):
 
 
     def _take_action(self, action):
-        print(action)
         action = np.nan_to_num(action, posinf=1, neginf=-1)
         action_type = action[0]
         amount = 0.5*(action[1] - 1) + 1 # https://tiagoolivoto.github.io/metan/reference/resca.html
@@ -150,7 +143,7 @@ class CryptoTradingEnv(gym.Env):
                         'type': 'buy',
                         'price': current_price
                     })
-                    '''
+                    
                     # Take position
                     self.positions[coin].put((current_price, coins_bought))
                     bought = coins_bought
@@ -170,7 +163,7 @@ class CryptoTradingEnv(gym.Env):
                         else:
                             reward = -bought * current_price
                             bought = 0
-                    '''
+
 
             elif action_type >= -1 and action_type < -1/3:
                 # Sell amount % of coin held
@@ -188,7 +181,7 @@ class CryptoTradingEnv(gym.Env):
                         'type': 'sell',
                         'price': current_price
                     })
-                    '''
+                    
                     # Liquidate position(s)
                     self.sales[coin].put((-current_price, -coins_sold))
                     liquidate = coins_sold
@@ -208,7 +201,7 @@ class CryptoTradingEnv(gym.Env):
                         else:
                             # Rounding error - trying to sell something it doesn't have
                             liquidate = 0
-                    '''
+                    
             else:
                 # Hold
                 pass
@@ -217,7 +210,7 @@ class CryptoTradingEnv(gym.Env):
         if self.net_worth[-1] > self.max_net_worth:
             self.max_net_worth = self.net_worth[-1]
 
-        return np.mean(np.diff(self.net_worth))
+        return reward
 
 
     def _next_observation(self):
@@ -251,7 +244,7 @@ class CryptoTradingEnv(gym.Env):
         #print('obs_dt', t1-t0)
 
         obs = np.nan_to_num(np.concatenate(frame), posinf=MAX_VALUE, neginf=-MAX_VALUE)
-        print(obs)
+        #print(obs)
         return obs
 
     def _calculate_net_worth(self):

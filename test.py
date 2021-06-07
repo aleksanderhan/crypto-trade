@@ -75,7 +75,7 @@ if __name__ == '__main__':
     data = get_data(start_time, end_time, coins)
 
     study_name = f'{model_name}_{policy}_{coins_str}'
-    env_params, model_params = load_params(study_name)
+    model_params = load_params(study_name)
 
     env = CryptoTradingEnv(data, coins, max_initial_balance)
     env = make_vec_env(lambda: env, n_envs=1, vec_env_cls=DummyVecEnv)

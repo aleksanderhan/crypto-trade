@@ -27,7 +27,7 @@ training_iterations = 100
 epochs = 100
 max_initial_balance = 50000
 training_split = 0.9
-n_envs = 1
+n_envs = 4
 
 
 if __name__ == '__main__':
@@ -62,7 +62,7 @@ if __name__ == '__main__':
         train_env = make_vec_env(
             lambda: train_env, 
             n_envs=n_envs,
-            vec_env_cls=DummyVecEnv
+            vec_env_cls=SubprocVecEnv
         )
             
         model = PPO2(policy,
