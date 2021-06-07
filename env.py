@@ -7,8 +7,8 @@ import requests
 import json
 import random
 import warnings
+from queue import PriorityQueue
 from collections import deque
-from empyrical import sortino_ratio, calmar_ratio, omega_ratio
 from time import perf_counter
 
 from visualize import TradingGraph
@@ -27,33 +27,36 @@ class CryptoTradingEnv(gym.Env):
     def __init__(self, 
                 df, 
                 coins, 
-                max_initial_balance, 
-                reward_func,
-                reward_len,
+                max_initial_balance,
                 fee=0.005):
         
         super(CryptoTradingEnv, self).__init__()
 
-        self.max_initial_balance = max_initial_balance
-        self.initial_balance = random.randint(1000, max_initial_balance)
+        self.visualization = None
         self.df = df.fillna(method='bfill')
         self.coins = coins
-        self.max_steps = len(df.index) - 1
         self.fee = fee
-        self.visualization = None
-        self.current_step = 1
-        self.portfolio = {}
+        
+        self.max_initial_balance = max_initial_balance
+        self.initial_balance = random.randint(1000, max_initial_balance)
         self.max_net_worth = self.initial_balance
         self.balance = deque(maxlen=2)
-        self.net_worth = deque(maxlen=reward_len)
+        self.net_worth = deque(maxlen=2)
+        self.portfolio = {}
+        self.portfolio_value = {}
+        
+        self.max_steps = len(df.index) - 1
+        self.current_step = 1
+
         self.trades = []
-        self.reward_func = reward_func
+        self.positions = {}
+        self.sales = {}
 
         # Buy/sell/hold for each coin
         self.action_space = spaces.Box(low=np.array([-1, -1, -1], dtype=np.float32), high=np.array([1, 1, 1], dtype=np.float32), dtype=np.float32)
         
-        # (num_coins * (portefolio value & candles) + (balance & net worth & timestamp))
-        observation_space_len = len(coins) * 6 + 3
+        # (num_coins * (portfolio amount & portfolio value & candles) + (balance & net worth & timestamp))
+        observation_space_len = len(coins) * 7 + 3
         self.observation_space = spaces.Box(
             low=-MAX_VALUE,
             high=MAX_VALUE, 
@@ -65,23 +68,28 @@ class CryptoTradingEnv(gym.Env):
     def step(self, action):
         t0 = perf_counter()
         # Execute one time step within the environment
-        self._take_action(action)
+        print('*')
+        reward = self._take_action(action)
+        print('**')
+
         self.current_step += 1
+        print(self.current_step)
 
         obs = self._next_observation()
-        reward = self._get_reward(self.reward_func)
+        print('***')
 
         lost_90_percent_net_worth = float(self.net_worth[-1]) < (self.initial_balance / 10)
-        done = lost_90_percent_net_worth or self.current_step >= self.max_steps
+        done = lost_90_percent_net_worth or self.current_step > self.max_steps
 
         info = {
             'current_step': self.current_step, 
             'last_trade': self._get_last_trade(),
-            'profit': self.get_profit(),
+            'profit': self._get_profit(),
             'max_steps': self.max_steps
         }
         t1 = perf_counter()
         #print('step dt', t1-t0)
+        print('reward', reward)
         return obs, reward, done, info
 
 
@@ -94,34 +102,23 @@ class CryptoTradingEnv(gym.Env):
 
         for coin in self.coins:
             self.portfolio[coin] = deque(maxlen=2)
+            self.portfolio_value[coin] = deque(maxlen=2)
             for i in range(2):
                 self.portfolio[coin].append(0)
+                self.portfolio_value[coin].append(0)
+
+            self.positions[coin] = PriorityQueue()
+            self.sales[coin] = PriorityQueue()
 
         for i in range(2):
             self.balance.append(self.initial_balance)
             self.net_worth.append(self.initial_balance)
 
-        return self._next_observation()
-
-
-    def _get_reward(self, reward_func):        
-        returns = np.diff(self.net_worth)
-
-        if self.reward_func == 'sortino':
-            reward = sortino_ratio(returns)
-        elif self.reward_func == 'calmar':
-            reward = calmar_ratio(returns)
-        elif self.reward_func == 'omega':
-            reward = omega_ratio(returns)
-        elif self.reward_func == 'simple':
-            reward = np.mean(returns)
-        else:
-            raise NotImplementedError
-
-        return reward if not np.isinf(reward) and not np.isnan(reward) else 0
+        return self._next_observation()        
 
 
     def _take_action(self, action):
+        print(action)
         action = np.nan_to_num(action, posinf=1, neginf=-1)
         action_type = action[0]
         amount = 0.5*(action[1] - 1) + 1 # https://tiagoolivoto.github.io/metan/reference/resca.html
@@ -130,11 +127,13 @@ class CryptoTradingEnv(gym.Env):
         coin = self.coins[int(coin_action)]
 
         # Set the current price to a random price within the time step
-        current_price = random.uniform(self.df.loc[self.current_step, coin + '_low'], self.df.loc[self.current_step, coin + '_high'])
+        current_price = self._get_current_price(coin)
+
+        reward = 0
 
         if current_price > 0: # Price is 0 before ICO
             if action_type  <= 1 and action_type > 1/3:
-                # Buy amount % of balance in shares
+                # Buy amount % of balance in coin
                 total_possible = self.balance[-1] / current_price
                 coins_bought = max(0, total_possible * (1 - self.fee) * amount)
                 cost = coins_bought * current_price
@@ -143,39 +142,82 @@ class CryptoTradingEnv(gym.Env):
                 self.portfolio[coin].append(self.portfolio[coin][-1] + coins_bought)
 
                 if coins_bought > 0:
-                  self.trades.append({
-                    'step': self.current_step,
-                    'coin': coin,
-                    'coins_bought': coins_bought, 
-                    'total': cost,
-                    'type': 'buy',
-                    'price': current_price
+                    self.trades.append({
+                        'step': self.current_step,
+                        'coin': coin,
+                        'coins_bought': coins_bought, 
+                        'total': cost,
+                        'type': 'buy',
+                        'price': current_price
                     })
+                    '''
+                    # Take position
+                    self.positions[coin].put((current_price, coins_bought))
+                    bought = coins_bought
+                    while bought > 0:
+                        print('bought', bought)
+                        if not self.sales[coin].empty():
+                            sold_price, sold_amount = self.sales[coin].get() # NB! negative values
+                            if bought > abs(sold_amount):
+                                reward += sold_price * sold_amount - bought * current_price
+                                bought += sold_amount
+                            elif bought < abs(sold_amount):
+                                reward += sold_price * sold_amount - bought * current_price
+                                self.sales[coin].put((sold_price, sold_amount + bought))
+                                bought = 0
+                            else:
+                                bought = 0
+                        else:
+                            reward = -bought * current_price
+                            bought = 0
+                    '''
 
             elif action_type >= -1 and action_type < -1/3:
-                # Sell amount % of shares held
+                # Sell amount % of coin held
                 coins_sold = max(0, self.portfolio[coin][-1] * amount)
 
                 self.balance.append(self.balance[-1] + coins_sold * (1 - self.fee) * current_price)
                 self.portfolio[coin].append(self.portfolio[coin][-1] - coins_sold)
 
                 if coins_sold > 0:
-                  self.trades.append({
-                    'step': self.current_step,
-                    'coin': coin,
-                    'coins_sold': coins_sold, 
-                    'total': coins_sold * current_price,
-                    'type': 'sell',
-                    'price': current_price
+                    self.trades.append({
+                        'step': self.current_step,
+                        'coin': coin,
+                        'coins_sold': coins_sold, 
+                        'total': coins_sold * current_price,
+                        'type': 'sell',
+                        'price': current_price
                     })
+                    '''
+                    # Liquidate position(s)
+                    self.sales[coin].put((-current_price, -coins_sold))
+                    liquidate = coins_sold
+                    while liquidate > 0:
+                        print('liquidate', liquidate)
+                        if not self.positions[coin].empty():
+                            pos_price, pos_amount = self.positions[coin].get()
+                            if liquidate > pos_amount:
+                                reward += liquidate * current_price - pos_amount * pos_price
+                                liquidate -= pos_amount
+                            elif liquidate < pos_amount:
+                                reward += liquidate * current_price - pos_amount * pos_price
+                                self.positions[coin].put((pos_price, pos_amount - liquidate))
+                                liquidate = 0
+                            else:
+                                liquidate = 0
+                        else:
+                            # Rounding error - trying to sell something it doesn't have
+                            liquidate = 0
+                    '''
             else:
                 # Hold
                 pass
 
-
         self.net_worth.append(self._calculate_net_worth())
         if self.net_worth[-1] > self.max_net_worth:
             self.max_net_worth = self.net_worth[-1]
+
+        return np.mean(np.diff(self.net_worth))
 
 
     def _next_observation(self):
@@ -194,8 +236,9 @@ class CryptoTradingEnv(gym.Env):
             frame.append(np.diff(np.log(close_values)))
             frame.append(np.diff(np.log(volume_values)))
 
-            # Portefolio
+            # Portfolio
             frame.append(np.diff(np.log(np.array(self.portfolio[coin]) + 1))) # +1 dealing with 0 log
+            frame.append(np.diff(np.log(np.array(self.portfolio_value[coin]) + 1)))
 
         # Time
         timestamp_values = self.df.loc[self.current_step - 1: self.current_step, 'timestamp'].values
@@ -207,8 +250,9 @@ class CryptoTradingEnv(gym.Env):
         t1 = perf_counter()
         #print('obs_dt', t1-t0)
 
-        return np.nan_to_num(np.concatenate(frame), posinf=MAX_VALUE, neginf=-MAX_VALUE)
-
+        obs = np.nan_to_num(np.concatenate(frame), posinf=MAX_VALUE, neginf=-MAX_VALUE)
+        print(obs)
+        return obs
 
     def _calculate_net_worth(self):
         portfolio_value = 0
@@ -218,6 +262,9 @@ class CryptoTradingEnv(gym.Env):
         return self.balance[-1] + portfolio_value
 
 
+    def _get_current_price(self, coin):
+        return random.uniform(self.df.loc[self.current_step, coin + '_low'], self.df.loc[self.current_step, coin + '_high'])
+
     def _get_last_trade(self):
         try:
             return self.trades[-1]
@@ -225,13 +272,13 @@ class CryptoTradingEnv(gym.Env):
             return None
 
 
-    def get_profit(self):
+    def _get_profit(self):
         return self.net_worth[-1] - self.initial_balance
 
 
     def render(self, mode='console', title=None, **kwargs):
         # Render the environment to the screen
-        profit = self.get_profit()        
+        profit = self._get_profit()        
         
         if mode == 'console':
             for coin in self.coins:

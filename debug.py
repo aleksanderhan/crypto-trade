@@ -1,29 +1,23 @@
-import os.path
-import gym
-import pandas as pd
-import random
-from time import perf_counter
-import warnings
-
-from stable_baselines import PPO2
-from stable_baselines.common import make_vec_env
-from stable_baselines.common.policies import MlpLstmPolicy
-from stable_baselines.common.vec_env import DummyVecEnv, SubprocVecEnv
-from stable_baselines.common.env_checker import check_env
-
-
-from env import CryptoTradingEnv
-from test import run_n_test
-from lib import get_data, load_params
-
-
-coins = ['eth']
-
-df = get_data('2021-01-01', '2021-01-02', coins)
-
-env_params, model_params = load_params()
+from queue import PriorityQueue
 
 
 
-train_env = CryptoTradingEnv(df, coins, 10000, **env_params)
-check_env(train_env, warn=True)
+sales = PriorityQueue()
+
+
+bought = coins_bought
+while bought > 0:
+    if not sales.empty():
+        sold_price, sold_amount = sales.get() # NB! negative values
+        if bought > abs(sold_amount):
+            reward += sold_price * sold_amount - bought * current_price
+            bought += sold_amount
+        elif bought < abs(sold_amount):
+            reward += sold_price * sold_amount - bought * current_price
+            sales.put((sold_price, sold_amount + bought))
+            bought = 0
+        else:
+            bought = 0
+    else:
+        reward = -bought * current_price
+        bought = 0

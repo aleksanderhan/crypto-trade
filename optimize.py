@@ -7,6 +7,7 @@ import warnings
 from stable_baselines import PPO2
 from stable_baselines.common import make_vec_env
 from stable_baselines.common.vec_env import DummyVecEnv
+from stable_baselines.common.evaluation import evaluate_policy
 
 from env import CryptoTradingEnv
 from lib import get_data
@@ -14,7 +15,7 @@ from lib import get_data
 warnings.filterwarnings("ignore")
 
 
-coins = ['aave', 'algo', 'btc', 'comp', 'eth', 'fil', 'link', 'ltc', 'nmr', 'snx', 'uni', 'xlm', 'yfi']
+coins = ['aave', 'algo', 'btc', 'comp', 'eth', 'fil', 'link', 'ltc', 'nmr', 'snx', 'uni', 'xlm', 'xtz', 'yfi']
 coins_str = ','.join(sorted(coins))
 start_time = '2021-01-01T00:00'
 end_time = '2021-02-01T00:00'
@@ -32,39 +33,22 @@ def optimize(n_trials=5000):
 
 
 def objective_fn(trial):
-    env_params = optimize_env(trial)
     model_params = optimize_ppo2(trial)
 
-    train_env, validation_env = initialize_envs(env_params)
-    
+    train_env, validation_env = initialize_envs()  
     model = PPO2(policy, train_env, nminibatches=1, **model_params)
 
     train_maxlen = len(train_env.get_attr('df')[0].index) - 1
     model.learn(train_maxlen)
-
 
     trades = train_env.get_attr('trades')[0]
     if len(trades) < 1:
         raise optuna.structs.TrialPruned()
 
 
-    done = False
-    obs = validation_env.reset()
-    while not done:
-        action, _states = model.predict(obs, deterministic=True)
-        obs, reward, done, info = validation_env.step(action)
+    mean_reward, _ = evaluate_policy(model, validation_env, n_eval_episodes=5)
 
-    initial_balance = validation_env.get_attr('initial_balance')[0]
-    profit = info[0]['profit']
-
-    return -(profit/initial_balance)
-
-
-def optimize_env(trial):
-    return {
-        'reward_len': trial.suggest_int('reward_len', 2, 200),
-        'reward_func': trial.suggest_categorical('reward_func', ['sortino', 'calmar', 'omega', 'simple'])
-    }
+    return -mean_reward
 
 
 def optimize_ppo2(trial):
@@ -79,15 +63,15 @@ def optimize_ppo2(trial):
     }
 
 
-def initialize_envs(env_params):
+def initialize_envs():
     slice_point = int(len(df.index) * training_split)
     train_df = df[:slice_point]
     test_df = df[slice_point:]
     train_df.reset_index(drop=True, inplace=True)
     test_df.reset_index(drop=True, inplace=True)
 
-    train_env = DummyVecEnv([lambda: CryptoTradingEnv(train_df, coins, max_initial_balance, **env_params)])
-    validation_env = DummyVecEnv([lambda: CryptoTradingEnv(test_df, coins, max_initial_balance, **env_params)])
+    train_env = DummyVecEnv([lambda: CryptoTradingEnv(train_df, coins, max_initial_balance)])
+    validation_env = DummyVecEnv([lambda: CryptoTradingEnv(test_df, coins, max_initial_balance)])
 
     return train_env, validation_env
 

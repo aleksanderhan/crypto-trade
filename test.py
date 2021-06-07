@@ -24,12 +24,13 @@ def test_model(model, env, render):
     done = False
 
     while not done:
-        action, _states = model.predict(obs)
-        obs, reward, done, info = env.step(action)
         if render:
             env.render(mode=render)
-        else:
+        action, _states = model.predict(obs)
+        obs, reward, done, info = env.step(action)
+        if not render:
             print(info[0]['current_step'], '/', info[0]['max_steps'], end="\r", flush=True)
+    print()
 
     return info[0]['profit']
 
@@ -76,7 +77,7 @@ if __name__ == '__main__':
     study_name = f'{model_name}_{policy}_{coins_str}'
     env_params, model_params = load_params(study_name)
 
-    env = CryptoTradingEnv(data, coins, max_initial_balance, **env_params)
+    env = CryptoTradingEnv(data, coins, max_initial_balance)
     env = make_vec_env(lambda: env, n_envs=1, vec_env_cls=DummyVecEnv)
 
     

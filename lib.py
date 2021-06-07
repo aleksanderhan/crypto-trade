@@ -20,10 +20,6 @@ def load_params(study_name):
         params = study.best_trial.params
         print(params)
 
-        env_params = {
-            'reward_len': params['reward_len'],
-            'reward_func': params['reward_func']
-        }
         model_params = {
             'policy': params['policy'],
             'n_steps': params['n_steps'],
@@ -34,10 +30,6 @@ def load_params(study_name):
             'lam': params['lam']
         }
     except:
-        env_params = {
-            'reward_len': 30,
-            'reward_func': 'omega'
-        }
         model_params = {
             'n_steps': 1480,
             'gamma': 0.981031411815395,
@@ -48,4 +40,4 @@ def load_params(study_name):
             'lam': 0.9888716588160799
         }
 
-    return env_params, model_params
+    return model_params

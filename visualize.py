@@ -129,7 +129,7 @@ class TradingGraph:
 
     def _render_trades(self, current_step, trades, step_range):
         for trade in trades:
-            if trade['step'] in step_range:
+            if trade['step'] in step_range and trade['coin'] == 'btc':
                 date = self.df['timestamp'].values[trade['step']]
                 high = self.df['btc_high'].values[trade['step']]
                 low = self.df['btc_low'].values[trade['step']]
