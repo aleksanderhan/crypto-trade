@@ -20,7 +20,7 @@ warnings.filterwarnings("ignore")
 
 coins = ['aave', 'algo', 'btc', 'comp', 'eth', 'fil', 'link', 'ltc', 'nmr', 'snx', 'uni', 'xlm', 'xtz', 'yfi']
 coins_str = ','.join(sorted(coins))
-start_time = '2020-05-01T00:00'
+start_time = '2021-01-01T00:00'
 end_time = '2021-05-31T00:00'
 policy = 'MlpLstmPolicy'
 training_iterations = 100
@@ -88,6 +88,13 @@ if __name__ == '__main__':
             print('iteration:', i, 'epoch:', e, 'training time:', t1 - t0)
 
         #train_env.close()
-
-        model.set_env(validation_env)
+        model = PPO2(policy,
+                validation_env, 
+                verbose=2, 
+                noptepochs=10,
+                nminibatches=1,
+                tensorboard_log='./tensorboard/',
+                **model_params)
+        if os.path.isfile(fname + '.zip'):
+            model.load(fname)
         run_n_test(model, validation_env, 5, False)

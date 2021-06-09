@@ -23,24 +23,30 @@ def test_model(model, env, render):
     obs = env.reset()
     done = False
 
+    total_reward = 0
     while not done:
         if render:
             env.render(mode=render)
         action, _states = model.predict(obs)
         obs, reward, done, info = env.step(action)
+        total_reward += reward
         if not render:
             print(info[0]['current_step'], '/', info[0]['max_steps'], end="\r", flush=True)
     print()
 
-    return info[0]['profit']
+    return info[0]['profit'], total_reward
 
 
 def run_n_test(model, env, n, render=False):
-    profit = []
+    profits = []
+    total_rewards = []
     for i in range(n):
-        profit.append(test_model(model, env, render))
+        profit, total_reward = test_model(model, env, render)
+        profits.append(profit)
+        total_rewards.append(total_reward)
         print(f'{i+1}/{n}', flush=True)
-    print('Profit:', np.mean(profit), ' +/-', np.std(profit))
+    print('Profit:', np.mean(profits), ' +/-', np.std(profits))
+    print('Total reward:', np.mean(total_rewards), '+/-', np.std(total_rewards))
 
 
 def load_model(fname, policy, env, model_params):

@@ -80,7 +80,8 @@ class CryptoTradingEnv(gym.Env):
             'current_step': self.current_step, 
             'last_trade': self._get_last_trade(),
             'profit': self._get_profit(),
-            'max_steps': self.max_steps
+            'max_steps': self.max_steps,
+            'reward': reward
         }
         t1 = perf_counter()
         #print('step dt', t1-t0)
@@ -128,8 +129,8 @@ class CryptoTradingEnv(gym.Env):
             if action_type  <= 1 and action_type > 1/3:
                 # Buy amount % of balance in coin
                 total_possible = self.balance[-1] / current_price
-                coins_bought = max(0, total_possible * (1 - self.fee) * amount)
-                cost = coins_bought * current_price
+                coins_bought = total_possible * (1 - self.fee) * amount
+                cost = total_possible * current_price * amount
         
                 self.balance.append(self.balance[-1] - cost)
                 self.portfolio[coin].append(self.portfolio[coin][-1] + coins_bought)
@@ -143,32 +144,40 @@ class CryptoTradingEnv(gym.Env):
                         'type': 'buy',
                         'price': current_price
                     })
+
+                    reward -= cost
                     
+                    '''
                     # Take position
                     self.positions[coin].put((current_price, coins_bought))
-                    bought = coins_bought
-                    while bought > 0:
+                    invest = coins_bought
+                    while invest > 0:
                         if not self.sales[coin].empty():
                             sold_price, sold_amount = self.sales[coin].get() # NB! negative values
-                            if bought > abs(sold_amount):
-                                reward += sold_price * sold_amount - bought * current_price
-                                bought += sold_amount
-                            elif bought < abs(sold_amount):
-                                reward += sold_price * sold_amount - bought * current_price
-                                self.sales[coin].put((sold_price, sold_amount + bought))
-                                bought = 0
+                            sold_price = abs(sold_price)
+
+                            if invest > sold_amount:
+                                reward += sold_price * sold_amount - sold_amount * current_price * (1 + self.fee)
+                                invest -= sold_amount
+                            elif invest < sold_amount:
+                                reward += sold_price * sold_amount - invest * current_price * (1 + self.fee)
+                                self.sales[coin].put((-sold_price, sold_amount - invest))
+                                invest = 0
                             else:
-                                bought = 0
+                                reward += sold_price * sold_amount - invest * current_price * (1 + self.fee)
+                                invest = 0
                         else:
-                            reward = -bought * current_price
-                            bought = 0
+                            reward += -invest * current_price * (1 + self.fee)
+                            invest = 0
+                    '''
 
 
             elif action_type >= -1 and action_type < -1/3:
                 # Sell amount % of coin held
-                coins_sold = max(0, self.portfolio[coin][-1] * amount)
+                coins_sold = self.portfolio[coin][-1] * amount
+                sell_value = coins_sold * current_price * (1 - self.fee)
 
-                self.balance.append(self.balance[-1] + coins_sold * (1 - self.fee) * current_price)
+                self.balance.append(self.balance[-1] + sell_value)
                 self.portfolio[coin].append(self.portfolio[coin][-1] - coins_sold)
 
                 if coins_sold > 0:
@@ -176,30 +185,34 @@ class CryptoTradingEnv(gym.Env):
                         'step': self.current_step,
                         'coin': coin,
                         'coins_sold': coins_sold, 
-                        'total': coins_sold * current_price,
+                        'total': sell_value,
                         'type': 'sell',
                         'price': current_price
                     })
+
+                    reward += sell_value
                     
+                    '''
                     # Liquidate position(s)
-                    self.sales[coin].put((-current_price, -coins_sold))
+                    self.sales[coin].put((-current_price, coins_sold))
                     liquidate = coins_sold
                     while liquidate > 0:
                         if not self.positions[coin].empty():
                             pos_price, pos_amount = self.positions[coin].get()
                             if liquidate > pos_amount:
-                                reward += liquidate * current_price - pos_amount * pos_price
+                                reward += pos_amount * current_price * (1 - self.fee) - pos_amount * pos_price
                                 liquidate -= pos_amount
                             elif liquidate < pos_amount:
-                                reward += liquidate * current_price - pos_amount * pos_price
+                                reward += liquidate * current_price * (1 - self.fee) - pos_amount * pos_price
                                 self.positions[coin].put((pos_price, pos_amount - liquidate))
                                 liquidate = 0
                             else:
+                                reward += liquidate * current_price * (1 - self.fee) - pos_amount * pos_price
                                 liquidate = 0
                         else:
                             # Rounding error - trying to sell something it doesn't have
                             liquidate = 0
-                    
+                    '''
             else:
                 # Hold
                 pass
@@ -280,7 +293,6 @@ class CryptoTradingEnv(gym.Env):
             print(f'Balance: {self.balance[-1]} (Initial balance: {self.initial_balance})')
             print(f'Net worth: {self.net_worth[-1]} (Max net worth: {self.max_net_worth})')
             print(f'Profit: {profit}')
-            print(f'Reward: {self._get_reward()}')
             print()
 
         elif mode == 'human':
