@@ -7,7 +7,6 @@ import requests
 import json
 import random
 import warnings
-from queue import PriorityQueue
 from collections import deque
 from time import perf_counter
 
@@ -49,8 +48,6 @@ class CryptoTradingEnv(gym.Env):
         self.current_step = 1
 
         self.trades = []
-        self.positions = {}
-        self.sales = {}
 
         # Buy/sell/hold for each coin
         self.action_space = spaces.Box(low=np.array([-1, -1, -1], dtype=np.float32), high=np.array([1, 1, 1], dtype=np.float32), dtype=np.float32)
@@ -102,9 +99,6 @@ class CryptoTradingEnv(gym.Env):
                 self.portfolio[coin].append(0)
                 self.portfolio_value[coin].append(0)
 
-            self.positions[coin] = PriorityQueue()
-            self.sales[coin] = PriorityQueue()
-
         for i in range(2):
             self.balance.append(self.initial_balance)
             self.net_worth.append(self.initial_balance)
@@ -122,8 +116,6 @@ class CryptoTradingEnv(gym.Env):
 
         # Set the current price to a random price within the time step
         current_price = self._get_current_price(coin)
-
-        reward = 0
 
         if current_price > 0: # Price is 0 before ICO
             if action_type  <= 1 and action_type > 1/3:
@@ -145,32 +137,7 @@ class CryptoTradingEnv(gym.Env):
                         'price': current_price
                     })
 
-                    reward -= cost
-                    
-                    '''
-                    # Take position
-                    self.positions[coin].put((current_price, coins_bought))
-                    invest = coins_bought
-                    while invest > 0:
-                        if not self.sales[coin].empty():
-                            sold_price, sold_amount = self.sales[coin].get() # NB! negative values
-                            sold_price = abs(sold_price)
-
-                            if invest > sold_amount:
-                                reward += sold_price * sold_amount - sold_amount * current_price * (1 + self.fee)
-                                invest -= sold_amount
-                            elif invest < sold_amount:
-                                reward += sold_price * sold_amount - invest * current_price * (1 + self.fee)
-                                self.sales[coin].put((-sold_price, sold_amount - invest))
-                                invest = 0
-                            else:
-                                reward += sold_price * sold_amount - invest * current_price * (1 + self.fee)
-                                invest = 0
-                        else:
-                            reward += -invest * current_price * (1 + self.fee)
-                            invest = 0
-                    '''
-
+                    reward = cost
 
             elif action_type >= -1 and action_type < -1/3:
                 # Sell amount % of coin held
@@ -190,32 +157,11 @@ class CryptoTradingEnv(gym.Env):
                         'price': current_price
                     })
 
-                    reward += sell_value
-                    
-                    '''
-                    # Liquidate position(s)
-                    self.sales[coin].put((-current_price, coins_sold))
-                    liquidate = coins_sold
-                    while liquidate > 0:
-                        if not self.positions[coin].empty():
-                            pos_price, pos_amount = self.positions[coin].get()
-                            if liquidate > pos_amount:
-                                reward += pos_amount * current_price * (1 - self.fee) - pos_amount * pos_price
-                                liquidate -= pos_amount
-                            elif liquidate < pos_amount:
-                                reward += liquidate * current_price * (1 - self.fee) - pos_amount * pos_price
-                                self.positions[coin].put((pos_price, pos_amount - liquidate))
-                                liquidate = 0
-                            else:
-                                reward += liquidate * current_price * (1 - self.fee) - pos_amount * pos_price
-                                liquidate = 0
-                        else:
-                            # Rounding error - trying to sell something it doesn't have
-                            liquidate = 0
-                    '''
+                    reward = sell_value
+
             else:
                 # Hold
-                pass
+                reward = 0
 
         self.net_worth.append(self._calculate_net_worth())
         if self.net_worth[-1] > self.max_net_worth:
