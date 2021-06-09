@@ -117,6 +117,8 @@ class CryptoTradingEnv(gym.Env):
         # Set the current price to a random price within the time step
         current_price = self._get_current_price(coin)
 
+        reward = 0
+
         if current_price > 0: # Price is 0 before ICO
             if action_type  <= 1 and action_type > 1/3:
                 # Buy amount % of balance in coin
@@ -137,7 +139,7 @@ class CryptoTradingEnv(gym.Env):
                         'price': current_price
                     })
 
-                    reward = cost
+                    reward -= cost
 
             elif action_type >= -1 and action_type < -1/3:
                 # Sell amount % of coin held
@@ -157,11 +159,11 @@ class CryptoTradingEnv(gym.Env):
                         'price': current_price
                     })
 
-                    reward = sell_value
+                    reward += sell_value
 
             else:
                 # Hold
-                reward = 0
+                pass
 
         self.net_worth.append(self._calculate_net_worth())
         if self.net_worth[-1] > self.max_net_worth:
