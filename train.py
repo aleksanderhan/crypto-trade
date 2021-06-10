@@ -5,11 +5,11 @@ import random
 from time import perf_counter
 import warnings
 
-from stable_baselines import PPO2
-from stable_baselines.common import make_vec_env
-from stable_baselines.common.policies import MlpLstmPolicy
-from stable_baselines.common.vec_env import DummyVecEnv, SubprocVecEnv
-from stable_baselines.common.env_checker import check_env
+from stable_baselines3 import PPO, A2C
+from stable_baselines3.common.env_util import make_vec_env
+from stable_baselines3.common.vec_env import SubprocVecEnv, DummyVecEnv
+from stable_baselines3.common.evaluation import evaluate_policy
+from stable_baselines3.common.env_checker import check_env
 
 from env import CryptoTradingEnv
 from test import run_n_test
@@ -65,13 +65,13 @@ if __name__ == '__main__':
             vec_env_cls=SubprocVecEnv
         )
             
-        model = PPO2(policy,
-                train_env, 
-                verbose=2, 
-                noptepochs=10,
-                nminibatches=n_envs,
-                tensorboard_log='./tensorboard/',
-                **model_params)
+        model = PPO(policy, 
+                    train_env, 
+                    verbose=1, 
+                    n_epochs=epochs,
+                    device='cpu',
+                    tensorboard_log='./tensorboard/',
+                    **model_params)
 
         model_name = model.__class__.__name__
         fname = f'{model_name}-{policy}-{coins_str}'

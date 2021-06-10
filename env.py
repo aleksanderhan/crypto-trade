@@ -9,6 +9,7 @@ import random
 import warnings
 from collections import deque
 from time import perf_counter
+from queue import PriorityQueue
 
 from visualize import TradingGraph
 
@@ -27,6 +28,7 @@ class CryptoTradingEnv(gym.Env):
                 df, 
                 coins, 
                 max_initial_balance,
+                lookback_len=1440, # one day
                 fee=0.005):
         
         super(CryptoTradingEnv, self).__init__()
@@ -39,15 +41,19 @@ class CryptoTradingEnv(gym.Env):
         self.max_initial_balance = max_initial_balance
         self.initial_balance = random.randint(1000, max_initial_balance)
         self.max_net_worth = self.initial_balance
-        self.balance = deque(maxlen=2)
-        self.net_worth = deque(maxlen=2)
+        self.balance = deque(maxlen=lookback_len)
+        self.net_worth = deque(maxlen=lookback_len)
         self.portfolio = {}
         self.portfolio_value = {}
         
         self.max_steps = len(df.index) - 1
-        self.current_step = 1
+        self.lookback_len = lookback_len
+        self.current_step = lookback_len
 
         self.trades = []
+        self.positions = {}
+
+        self.rewards = deque(maxlen=lookback_len)
 
         # Buy/sell/hold for each coin
         self.action_space = spaces.Box(low=np.array([-1, -1, -1], dtype=np.float32), high=np.array([1, 1, 1], dtype=np.float32), dtype=np.float32)
@@ -93,15 +99,17 @@ class CryptoTradingEnv(gym.Env):
         self.trades = []
 
         for coin in self.coins:
-            self.portfolio[coin] = deque(maxlen=2)
-            self.portfolio_value[coin] = deque(maxlen=2)
-            for i in range(2):
+            self.positions[coin] = PriorityQueue()
+            self.portfolio[coin] = deque(maxlen=self.lookback_len)
+            self.portfolio_value[coin] = deque(maxlen=self.lookback_len)
+            for i in range(self.lookback_len):
                 self.portfolio[coin].append(0)
                 self.portfolio_value[coin].append(0)
 
-        for i in range(2):
+        for i in range(self.lookback_len):
             self.balance.append(self.initial_balance)
             self.net_worth.append(self.initial_balance)
+            self.rewards.append(0)
 
         return self._next_observation()        
 
@@ -115,15 +123,15 @@ class CryptoTradingEnv(gym.Env):
         coin = self.coins[int(coin_action)]
 
         # Set the current price to a random price within the time step
-        current_price = self._get_current_price(coin)
+        current_price = random.uniform(self.df.loc[self.current_step, coin + '_low'], self.df.loc[self.current_step, coin + '_high'])
 
-        reward = np.mean(np.diff(self.net_worth))
+        reward = 0
 
         if current_price > 0: # Price is 0 before ICO
             if action_type  <= 1 and action_type > 1/3:
                 # Buy amount % of balance in coin
                 total_possible = self.balance[-1] / current_price
-                coins_bought = total_possible * (1 - self.fee) * amount
+                coins_bought = total_possible * amount * (1 - self.fee)
                 cost = total_possible * current_price * amount
         
                 self.balance.append(self.balance[-1] - cost)
@@ -139,7 +147,7 @@ class CryptoTradingEnv(gym.Env):
                         'price': current_price
                     })
 
-                    reward -= cost
+                    reward -= total_possible * amount * self.fee
 
             elif action_type >= -1 and action_type < -1/3:
                 # Sell amount % of coin held
@@ -159,7 +167,24 @@ class CryptoTradingEnv(gym.Env):
                         'price': current_price
                     })
 
-                    reward += sell_value
+                    # Liquidate position(s)
+                    liquidate = coins_sold
+                    while liquidate > 0:
+                        if not self.positions[coin].empty():
+                            pos_price, pos_amount = self.positions[coin].get()
+                            if liquidate > pos_amount:
+                                reward += pos_amount * current_price * (1 - self.fee) - pos_amount * pos_price
+                                liquidate -= pos_amount
+                            elif liquidate < pos_amount:
+                                reward += liquidate * current_price * (1 - self.fee) - pos_amount * pos_price
+                                self.positions[coin].put((pos_price, pos_amount - liquidate))
+                                liquidate = 0
+                            else:
+                                reward += liquidate * current_price * (1 - self.fee) - pos_amount * pos_price
+                                liquidate = 0
+                        else:
+                            # Rounding error - trying to sell something it doesn't have
+                            liquidate = 0
 
             else:
                 # Hold
@@ -169,6 +194,7 @@ class CryptoTradingEnv(gym.Env):
         if self.net_worth[-1] > self.max_net_worth:
             self.max_net_worth = self.net_worth[-1]
 
+        self.rewards.append(reward)
         return reward
 
 
@@ -177,11 +203,11 @@ class CryptoTradingEnv(gym.Env):
         frame = []
         for coin in self.coins:
             # Price data
-            open_values = self.df.loc[self.current_step - 1: self.current_step, coin + '_open'].values
-            high_values = self.df.loc[self.current_step - 1: self.current_step, coin + '_high'].values
-            low_values = self.df.loc[self.current_step - 1: self.current_step, coin + '_low'].values
-            close_values = self.df.loc[self.current_step - 1: self.current_step, coin + '_close'].values
-            volume_values = self.df.loc[self.current_step - 1: self.current_step, coin + '_volume'].values
+            open_values = self.df.loc[self.current_step - self.lookback_len: self.current_step, coin + '_open'].values
+            high_values = self.df.loc[self.current_step - self.lookback_len: self.current_step, coin + '_high'].values
+            low_values = self.df.loc[self.current_step - self.lookback_len: self.current_step, coin + '_low'].values
+            close_values = self.df.loc[self.current_step - self.lookback_len: self.current_step, coin + '_close'].values
+            volume_values = self.df.loc[self.current_step - self.lookback_len: self.current_step, coin + '_volume'].values
             frame.append(np.diff(np.log(open_values)))
             frame.append(np.diff(np.log(high_values)))
             frame.append(np.diff(np.log(low_values)))
@@ -193,7 +219,7 @@ class CryptoTradingEnv(gym.Env):
             frame.append(np.diff(np.log(np.array(self.portfolio_value[coin]) + 1)))
 
         # Time
-        timestamp_values = self.df.loc[self.current_step - 1: self.current_step, 'timestamp'].values
+        timestamp_values = self.df.loc[self.current_step - self.lookback_len: self.current_step, 'timestamp'].values
         frame.append(np.diff(np.log(timestamp_values)))
 
         # Net worth and balance
@@ -212,10 +238,6 @@ class CryptoTradingEnv(gym.Env):
             coin_price = (self.df.at[self.current_step, coin + '_low'] + self.df.at[self.current_step, coin + '_high'])/2
             portfolio_value += self.portfolio[coin][-1] * coin_price
         return self.balance[-1] + portfolio_value
-
-
-    def _get_current_price(self, coin):
-        return random.uniform(self.df.loc[self.current_step, coin + '_low'], self.df.loc[self.current_step, coin + '_high'])
 
     def _get_last_trade(self):
         try:
