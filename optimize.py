@@ -48,6 +48,9 @@ def objective_fn(trial):
 
     mean_reward, _ = evaluate_policy(model, validation_env, n_eval_episodes=5)
 
+    if mean_reward == 0:
+        raise optuna.structs.TrialPruned()
+
     return -mean_reward
 
 

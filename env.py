@@ -117,7 +117,7 @@ class CryptoTradingEnv(gym.Env):
         # Set the current price to a random price within the time step
         current_price = self._get_current_price(coin)
 
-        reward = 0
+        reward = np.mean(np.diff(self.net_worth))
 
         if current_price > 0: # Price is 0 before ICO
             if action_type  <= 1 and action_type > 1/3:
