@@ -198,7 +198,7 @@ class CryptoTradingEnv(gym.Env):
 
         # Net worth and balance
         frame.append(np.diff(np.log(np.array(self.balance) + 1))) # +1 dealing with 0 log
-        frame.append(np.diff(np.log([self.net_worth[-2], self.net_worth[-1]])))
+        frame.append(np.diff(np.log(self.net_worth)))
         t1 = perf_counter()
         #print('obs_dt', t1-t0)
 

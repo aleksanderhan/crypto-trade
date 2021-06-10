@@ -31,13 +31,13 @@ def load_params(study_name):
         }
     except:
         model_params = {
-            'n_steps': 2045,
-            'gamma': 0.9203897188357445,
-            'learning_rate': 0.08992772391199896,
-            'ent_coef': 0.010952294186439615,
-            'cliprange': 0.26659350900421724,
-            'cliprange_vf': 0.3441675230088346,
-            'lam': 0.8262543245228096
+            'n_steps': 476,
+            'gamma': 0.90606675817696,
+            'learning_rate': 0.025412921449645007,
+            'ent_coef': 0.0008681344845273617,
+            'cliprange': 0.2025550612826041,
+            'cliprange_vf': 0.28148595837701307,
+            'lam': 0.904350962253066
         }
 
     return model_params
