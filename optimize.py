@@ -39,7 +39,8 @@ def objective_fn(trial):
     train_env, validation_env = initialize_envs()  
     model = PPO(
         policy, 
-        train_env, 
+        train_env,
+        device='cpu',
         batch_size=model_params['n_steps'], # https://github.com/DLR-RM/stable-baselines3/issues/440
         **model_params)
 
