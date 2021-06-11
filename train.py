@@ -22,12 +22,13 @@ coins = ['aave', 'algo', 'btc', 'comp', 'eth', 'fil', 'link', 'ltc', 'nmr', 'snx
 coins_str = ','.join(sorted(coins))
 start_time = '2021-01-01T00:00'
 end_time = '2021-05-31T00:00'
-policy = 'MlpLstmPolicy'
+policy = 'MlpPolicy'
+lookback_len = 1440
 training_iterations = 100
-epochs = 100
+epochs = 10
 max_initial_balance = 50000
 training_split = 0.9
-n_envs = 4
+n_envs = 8
 
 
 if __name__ == '__main__':
@@ -42,7 +43,7 @@ if __name__ == '__main__':
     test_df = df[slice_point:]
     test_df.reset_index(drop=True, inplace=True)
 
-    validation_env = CryptoTradingEnv(test_df, coins, max_initial_balance)
+    validation_env = CryptoTradingEnv(test_df, coins, max_initial_balance, lookback_len)
     #check_env(validation_env, warn=True)
     validation_env = make_vec_env(
         lambda: validation_env, 
@@ -57,7 +58,7 @@ if __name__ == '__main__':
         epochs_df = train_df[start_frame:end_frame]
         epochs_df.reset_index(drop=True, inplace=True)
 
-        train_env = CryptoTradingEnv(epochs_df, coins, max_initial_balance)
+        train_env = CryptoTradingEnv(epochs_df, coins, max_initial_balance, lookback_len)
         #check_env(train_env, warn=True)
         train_env = make_vec_env(
             lambda: train_env, 
@@ -70,17 +71,17 @@ if __name__ == '__main__':
                     verbose=1, 
                     n_epochs=epochs,
                     device='cpu',
+                    batch_size=model_params['n_steps'],
                     tensorboard_log='./tensorboard/',
                     **model_params)
 
         model_name = model.__class__.__name__
-        fname = f'{model_name}-{policy}-{coins_str}'
+        fname = f'{model_name}-{policy}-ll{lookback_len}-{coins_str}'
         if os.path.isfile(fname + '.zip'):
             model.load(fname)  
 
         for e in range(epochs):
             t0 = perf_counter()
-            #train_env.reset()
             model.learn(total_timesteps=len(epochs_df.index) - 1)
             model.save(fname)
             t1 = perf_counter()
@@ -88,13 +89,14 @@ if __name__ == '__main__':
             print('iteration:', i, 'epoch:', e, 'training time:', t1 - t0)
 
         #train_env.close()
-        model = PPO2(policy,
+        model = PPO(policy,
                 validation_env, 
-                verbose=2, 
-                noptepochs=10,
-                nminibatches=1,
+                verbose=1, 
+                n_epochs=epochs,
+                batch_size=model_params['n_steps'],
                 tensorboard_log='./tensorboard/',
                 **model_params)
+
         if os.path.isfile(fname + '.zip'):
             model.load(fname)
         run_n_test(model, validation_env, 5, False)

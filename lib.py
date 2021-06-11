@@ -21,13 +21,12 @@ def load_params(study_name):
         print(params)
 
         model_params = {
-            'policy': params['policy'],
             'n_steps': params['n_steps'],
             'gamma': params['gamma'],
             'learning_rate': params['learning_rate'],
             'ent_coef': params['ent_coef'],
-            'cliprange': params['cliprange'],
-            'lam': params['lam']
+            'clip_range': params['cliprange'],
+            'clip_range_vf': params['clip_range_vf']
         }
     except:
         model_params = {
@@ -35,9 +34,8 @@ def load_params(study_name):
             'gamma': 0.90606675817696,
             'learning_rate': 0.025412921449645007,
             'ent_coef': 0.0008681344845273617,
-            'cliprange': 0.2025550612826041,
-            'cliprange_vf': 0.28148595837701307,
-            'lam': 0.904350962253066
+            'clip_range': 0.2025550612826041,
+            'clip_range_vf': 0.28148595837701307
         }
 
     return model_params

@@ -28,7 +28,7 @@ class CryptoTradingEnv(gym.Env):
                 df, 
                 coins, 
                 max_initial_balance,
-                lookback_len=1440, # one day
+                lookback_len=1440,
                 fee=0.005):
         
         super(CryptoTradingEnv, self).__init__()
@@ -58,8 +58,8 @@ class CryptoTradingEnv(gym.Env):
         # Buy/sell/hold for each coin
         self.action_space = spaces.Box(low=np.array([-1, -1, -1], dtype=np.float32), high=np.array([1, 1, 1], dtype=np.float32), dtype=np.float32)
         
-        # (num_coins * (portfolio amount & portfolio value & candles) + (balance & net worth & timestamp))
-        observation_space_len = len(coins) * 7 + 3
+        # (num_coins * (portfolio amount & portfolio value & candles) + (balance & net worth & timestamp & reward))
+        observation_space_len = (len(coins) * 7 * (lookback_len -1)) + 4 * (lookback_len -1)
         self.observation_space = spaces.Box(
             low=-MAX_VALUE,
             high=MAX_VALUE, 
@@ -93,7 +93,7 @@ class CryptoTradingEnv(gym.Env):
 
     def reset(self):
         # Set the current step to a random point within the data frame
-        self.current_step = 1
+        self.current_step = self.lookback_len
         self.initial_balance = random.randint(1000, self.max_initial_balance)
         self.max_net_worth = self.initial_balance
         self.trades = []
@@ -136,6 +136,7 @@ class CryptoTradingEnv(gym.Env):
         
                 self.balance.append(self.balance[-1] - cost)
                 self.portfolio[coin].append(self.portfolio[coin][-1] + coins_bought)
+                self.positions[coin].put((current_price, coins_bought))
 
                 if coins_bought > 0:
                     self.trades.append({
@@ -147,7 +148,7 @@ class CryptoTradingEnv(gym.Env):
                         'price': current_price
                     })
 
-                    reward -= total_possible * amount * self.fee
+                    reward -= cost * self.fee
 
             elif action_type >= -1 and action_type < -1/3:
                 # Sell amount % of coin held
@@ -203,11 +204,11 @@ class CryptoTradingEnv(gym.Env):
         frame = []
         for coin in self.coins:
             # Price data
-            open_values = self.df.loc[self.current_step - self.lookback_len: self.current_step, coin + '_open'].values
-            high_values = self.df.loc[self.current_step - self.lookback_len: self.current_step, coin + '_high'].values
-            low_values = self.df.loc[self.current_step - self.lookback_len: self.current_step, coin + '_low'].values
-            close_values = self.df.loc[self.current_step - self.lookback_len: self.current_step, coin + '_close'].values
-            volume_values = self.df.loc[self.current_step - self.lookback_len: self.current_step, coin + '_volume'].values
+            open_values = self.df.loc[self.current_step - self.lookback_len: self.current_step -1, coin + '_open'].values
+            high_values = self.df.loc[self.current_step - self.lookback_len: self.current_step -1, coin + '_high'].values
+            low_values = self.df.loc[self.current_step - self.lookback_len: self.current_step -1, coin + '_low'].values
+            close_values = self.df.loc[self.current_step - self.lookback_len: self.current_step -1, coin + '_close'].values
+            volume_values = self.df.loc[self.current_step - self.lookback_len: self.current_step -1, coin + '_volume'].values
             frame.append(np.diff(np.log(open_values)))
             frame.append(np.diff(np.log(high_values)))
             frame.append(np.diff(np.log(low_values)))
@@ -219,18 +220,20 @@ class CryptoTradingEnv(gym.Env):
             frame.append(np.diff(np.log(np.array(self.portfolio_value[coin]) + 1)))
 
         # Time
-        timestamp_values = self.df.loc[self.current_step - self.lookback_len: self.current_step, 'timestamp'].values
+        timestamp_values = self.df.loc[self.current_step - self.lookback_len: self.current_step -1, 'timestamp'].values
         frame.append(np.diff(np.log(timestamp_values)))
 
-        # Net worth and balance
+        # Net worth and balance and reward
+        frame.append(np.diff(np.log(np.array(self.rewards) + 1)))
         frame.append(np.diff(np.log(np.array(self.balance) + 1))) # +1 dealing with 0 log
         frame.append(np.diff(np.log(self.net_worth)))
+
+        obs = np.nan_to_num(np.concatenate(frame), posinf=MAX_VALUE, neginf=-MAX_VALUE)
         t1 = perf_counter()
         #print('obs_dt', t1-t0)
 
-        obs = np.nan_to_num(np.concatenate(frame), posinf=MAX_VALUE, neginf=-MAX_VALUE)
-        #print(obs)
         return obs
+
 
     def _calculate_net_worth(self):
         portfolio_value = 0
@@ -238,6 +241,7 @@ class CryptoTradingEnv(gym.Env):
             coin_price = (self.df.at[self.current_step, coin + '_low'] + self.df.at[self.current_step, coin + '_high'])/2
             portfolio_value += self.portfolio[coin][-1] * coin_price
         return self.balance[-1] + portfolio_value
+
 
     def _get_last_trade(self):
         try:

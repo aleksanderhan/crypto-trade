@@ -7,11 +7,12 @@ import warnings
 import argparse
 from collections import deque
 
-from stable_baselines import PPO2
-from stable_baselines.common import make_vec_env
-from stable_baselines.common.policies import MlpPolicy, MlpLstmPolicy
-from stable_baselines.common.vec_env import DummyVecEnv, SubprocVecEnv
-from stable_baselines.common.evaluation import evaluate_policy
+
+from stable_baselines3 import PPO, A2C
+from stable_baselines3.common.env_util import make_vec_env
+from stable_baselines3.common.vec_env import SubprocVecEnv, DummyVecEnv
+from stable_baselines3.common.evaluation import evaluate_policy
+from stable_baselines3.common.env_checker import check_env
 
 from env import CryptoTradingEnv
 from lib import get_data, load_params
@@ -49,15 +50,6 @@ def run_n_test(model, env, n, render=False):
     print('Total reward:', np.mean(total_rewards), '+/-', np.std(total_rewards))
 
 
-def load_model(fname, policy, env, model_params):
-    model = PPO2(policy, env, nminibatches=1, **model_params)
-
-    if os.path.isfile(fname + '.zip'):
-        model.load(fname)
-    
-    return model
-
-
 start_time = '2021-06-01T00:00'
 end_time = '2021-06-06T00:00'
 max_initial_balance = 10000
@@ -74,20 +66,31 @@ if __name__ == '__main__':
     fname = args.fname.split('.')[0]
     model_name = fname.split('-')[0]
     policy = fname.split('-')[1]
+    lookback_len = int(fname.split('-')[2].strip('ll'))
     coins = fname.split('-')[-1].split(',')
     coins_str = ','.join(sorted(coins))
 
 
     data = get_data(start_time, end_time, coins)
 
-    study_name = f'{model_name}_{policy}_{coins_str}'
+    study_name = f'{model_name}_{policy}_ll{lookback_len}_{coins_str}'
     model_params = load_params(study_name)
 
-    env = CryptoTradingEnv(data, coins, max_initial_balance)
-    env = make_vec_env(lambda: env, n_envs=1, vec_env_cls=DummyVecEnv)
+    env = make_vec_env(
+        lambda: CryptoTradingEnv(data, coins, max_initial_balance, lookback_len), 
+        n_envs=1, 
+        vec_env_cls=DummyVecEnv
+    )
 
-    
-    model = load_model(fname, policy, env, model_params)
+    model = PPO(policy,
+                env, 
+                verbose=1,
+                batch_size=model_params['n_steps'],
+                tensorboard_log='./tensorboard/',
+                **model_params)
+
+    if os.path.isfile(fname + '.zip'):
+        model.load(fname)
 
     #mean_reward, std_reward = evaluate_policy(model, env, deterministic=False, render=bool(args.r), n_eval_episodes=episodes)
     #print('mean_reward:', mean_reward, 'std_reward', std_reward)
