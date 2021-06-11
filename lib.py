@@ -25,10 +25,11 @@ def load_params(study_name):
             'gamma': params['gamma'],
             'learning_rate': params['learning_rate'],
             'ent_coef': params['ent_coef'],
-            'clip_range': params['cliprange'],
+            'clip_range': params['clip_range'],
             'clip_range_vf': params['clip_range_vf']
         }
-    except:
+    except Exception as error:
+        print(error)
         model_params = {
             'n_steps': 476,
             'gamma': 0.90606675817696,

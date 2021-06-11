@@ -52,6 +52,7 @@ class CryptoTradingEnv(gym.Env):
 
         self.trades = []
         self.positions = {}
+        self.fees_payed = 0
 
         self.rewards = deque(maxlen=lookback_len)
 
@@ -84,6 +85,7 @@ class CryptoTradingEnv(gym.Env):
             'last_trade': self._get_last_trade(),
             'profit': self._get_profit(),
             'max_steps': self.max_steps,
+            'fees_payed': self.fees_payed,
             'reward': reward
         }
         t1 = perf_counter()
@@ -137,6 +139,7 @@ class CryptoTradingEnv(gym.Env):
                 self.balance.append(self.balance[-1] - cost)
                 self.portfolio[coin].append(self.portfolio[coin][-1] + coins_bought)
                 self.positions[coin].put((current_price, coins_bought))
+                self.fees_payed += cost * self.fee
 
                 if coins_bought > 0:
                     self.trades.append({
@@ -157,6 +160,7 @@ class CryptoTradingEnv(gym.Env):
 
                 self.balance.append(self.balance[-1] + sell_value)
                 self.portfolio[coin].append(self.portfolio[coin][-1] - coins_sold)
+                self.fees_payed += coins_sold * current_price * self.fee
 
                 if coins_sold > 0:
                     self.trades.append({
@@ -223,7 +227,7 @@ class CryptoTradingEnv(gym.Env):
         timestamp_values = self.df.loc[self.current_step - self.lookback_len: self.current_step -1, 'timestamp'].values
         frame.append(np.diff(np.log(timestamp_values)))
 
-        # Net worth and balance and reward
+        # Net worth and balance and rewards
         frame.append(np.diff(np.log(np.array(self.rewards) + 1)))
         frame.append(np.diff(np.log(np.array(self.balance) + 1))) # +1 dealing with 0 log
         frame.append(np.diff(np.log(self.net_worth)))

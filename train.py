@@ -32,7 +32,7 @@ n_envs = 8
 
 
 if __name__ == '__main__':
-    study = f'{policy}_{coins_str}'
+    study = f'PPO_{policy}_ll{lookback_len}_{coins_str}'
     model_params = load_params(study)
     print('model_params', model_params)
     
