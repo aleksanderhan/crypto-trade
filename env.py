@@ -10,6 +10,7 @@ import warnings
 from collections import deque
 from time import perf_counter
 from queue import PriorityQueue
+from empyrical import sharpe_ratio, sortino_ratio, calmar_ratio, omega_ratio
 
 from visualize import TradingGraph
 
@@ -37,30 +38,35 @@ class CryptoTradingEnv(gym.Env):
         self.df = df.fillna(method='bfill')
         self.coins = coins
         self.fee = fee
+        self.max_steps = len(df.index) - 1
+        self.lookback_len = lookback_len
+        self.current_step = lookback_len
         
         self.max_initial_balance = max_initial_balance
         self.initial_balance = random.randint(1000, max_initial_balance)
         self.max_net_worth = self.initial_balance
+        
         self.balance = deque(maxlen=lookback_len)
         self.net_worth = deque(maxlen=lookback_len)
+        self.rewards = deque(maxlen=lookback_len)
         self.portfolio = {}
         self.portfolio_value = {}
-        
-        self.max_steps = len(df.index) - 1
-        self.lookback_len = lookback_len
-        self.current_step = lookback_len
+
+        # Risk adjusted performance measures (whole portfolio)
+        self.sharpe = deque(maxlen=lookback_len)
+        self.sortino = deque(maxlen=lookback_len)
+        self.calmar = deque(maxlen=lookback_len)
+        self.omega = deque(maxlen=lookback_len)
 
         self.trades = []
         self.positions = {}
         self.fees_payed = 0
 
-        self.rewards = deque(maxlen=lookback_len)
-
         # Buy/sell/hold for each coin
         self.action_space = spaces.Box(low=np.array([-1, -1, -1], dtype=np.float32), high=np.array([1, 1, 1], dtype=np.float32), dtype=np.float32)
         
-        # (num_coins * (portfolio amount & portfolio value & candles) + (balance & net worth & timestamp & reward))
-        observation_space_len = (len(coins) * 7 * (lookback_len -1)) + 4 * (lookback_len -1)
+        # (num_coins * (portfolio amount & portfolio value & candles) + (balance & net worth & timestamp & reward & risk ratios))
+        observation_space_len = (len(coins) * 7 * (lookback_len -1)) + 8 * (lookback_len -1)
         self.observation_space = spaces.Box(
             low=-MAX_VALUE,
             high=MAX_VALUE, 
@@ -73,8 +79,19 @@ class CryptoTradingEnv(gym.Env):
         t0 = perf_counter()
         # Execute one time step within the environment
         reward = self._take_action(action)
-        self.current_step += 1
+        self.rewards.append(reward)
 
+        returns = np.diff(self.net_worth)
+        self.sharpe.append(sharpe_ratio(returns))
+        self.sortino.append(sortino_ratio(returns))
+        self.calmar.append(calmar_ratio(returns))
+        self.omega.append(omega_ratio(returns))
+
+        self.net_worth.append(self._calculate_net_worth())
+        if self.net_worth[-1] > self.max_net_worth:
+            self.max_net_worth = self.net_worth[-1]
+
+        self.current_step += 1
         obs = self._next_observation()
 
         lost_90_percent_net_worth = float(self.net_worth[-1]) < (self.initial_balance / 10)
@@ -112,6 +129,10 @@ class CryptoTradingEnv(gym.Env):
             self.balance.append(self.initial_balance)
             self.net_worth.append(self.initial_balance)
             self.rewards.append(0)
+            self.sharpe.append(0)
+            self.sortino.append(0)
+            self.calmar.append(0)
+            self.omega.append(0)
 
         return self._next_observation()        
 
@@ -119,7 +140,7 @@ class CryptoTradingEnv(gym.Env):
     def _take_action(self, action):
         action = np.nan_to_num(action, posinf=1, neginf=-1)
         action_type = action[0]
-        amount = 0.5*(action[1] - 1) + 1 # https://tiagoolivoto.github.io/metan/reference/resca.html
+        amount = 0.5*(action[1] - 1) + 1 # Rescaling:  R_v_i = (N_max − N_min)/(O_max − O_min)∗(O_i − O_max) + N_max
 
         coin_action = ((len(self.coins) - 1) / 2) * (action[2] - 1) + len(self.coins) - 1
         coin = self.coins[int(coin_action)]
@@ -195,11 +216,6 @@ class CryptoTradingEnv(gym.Env):
                 # Hold
                 pass
 
-        self.net_worth.append(self._calculate_net_worth())
-        if self.net_worth[-1] > self.max_net_worth:
-            self.max_net_worth = self.net_worth[-1]
-
-        self.rewards.append(reward)
         return reward
 
 
@@ -231,6 +247,12 @@ class CryptoTradingEnv(gym.Env):
         frame.append(np.diff(np.log(np.array(self.rewards) + 1)))
         frame.append(np.diff(np.log(np.array(self.balance) + 1))) # +1 dealing with 0 log
         frame.append(np.diff(np.log(self.net_worth)))
+
+        # Risk adjusted performance ratios
+        frame.append(np.diff(np.log(np.array(self.sharpe) + 1)))
+        frame.append(np.diff(np.log(np.array(self.sortino) + 1)))
+        frame.append(np.diff(np.log(np.array(self.calmar) + 1)))
+        frame.append(np.diff(np.log(np.array(self.omega) + 1)))
 
         obs = np.nan_to_num(np.concatenate(frame), posinf=MAX_VALUE, neginf=-MAX_VALUE)
         t1 = perf_counter()

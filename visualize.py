@@ -1,13 +1,10 @@
 import numpy as np
 import matplotlib
 matplotlib.use('TkAgg')
-#matplotlib.use('GTK3Agg')
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 from matplotlib import style
 
-# finance module is no longer part of matplotlib
-# see: https://github.com/matplotlib/mpl_finance
 from mplfinance.original_flavor import candlestick_ohlc as candlestick
 
 style.use('dark_background')

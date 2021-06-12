@@ -17,7 +17,7 @@ from stable_baselines3.common.env_checker import check_env
 from env import CryptoTradingEnv
 from lib import get_data, load_params
 
-warnings.filterwarnings("ignore")
+#warnings.filterwarnings("ignore")
 
 
 def test_model(model, env, render):
@@ -85,7 +85,6 @@ if __name__ == '__main__':
     model = PPO(policy,
                 env, 
                 verbose=1,
-                batch_size=model_params['n_steps'],
                 tensorboard_log='./tensorboard/',
                 **model_params)
 

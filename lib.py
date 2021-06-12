@@ -2,6 +2,23 @@ import requests
 import optuna
 import pandas as pd
 
+from torch import nn as nn
+
+
+hidden_units = {
+    'a': 64,
+    'b': 128,
+    'c': 256,
+    'd': 512
+}
+
+activation = {
+    'tanh': nn.Tanh, 
+    'relu': nn.ReLU, 
+    'elu': nn.ELU, 
+    'leaky_relu': nn.LeakyReLU
+}
+
 
 def get_data(start_time, end_time, coins):
     coinsStr = ','.join(coins)
@@ -13,12 +30,14 @@ def get_data(start_time, end_time, coins):
     return df
 
 
+def create_layers(permutation):
+    return [hidden_units[i] for i in permutation]
+
+
 def load_params(study_name):
     try:
         study = optuna.load_study(study_name=study_name, storage='sqlite:///params.db')
-
         params = study.best_trial.params
-        print(params)
 
         model_params = {
             'batch_size': params['batch_size'],
@@ -31,23 +50,33 @@ def load_params(study_name):
             'clip_range': params['clip_range'],
             'clip_range_vf': params['clip_range_vf'],
             'vf_coef': params['vf_coef'],
-            'policy_kwargs': params['policy_kwargs']
-
+            'policy_kwargs': dict(
+                net_arch=[dict(
+                    pi=create_layers(params['policy_net']), 
+                    vf=create_layers(params['value_net']))
+                ],
+                activation_fn=activation[params['activation_fn']]
+            )
         }
     except Exception as error:
         print(error)
         model_params = {
-            'batch_size': 512,
-            'n_steps': 512,
-            'gamma': 0.90606675817696,
-            'learning_rate': 0.025412921449645007,
+            'batch_size': 32,
+            'n_steps': 64,
+            'gamma': 0.98,
+            'learning_rate': 4.12e-05,
             'gae_lambda': 0.9,
             'max_grad_norm': 0.5,
-            'ent_coef': 0.0008681344845273617,
-            'clip_range': 0.2025550612826041,
-            'clip_range_vf': 0.28148595837701307,
-            'vf_coef': 0.5,
-            'policy_kwargs': None
+            'ent_coef': 1.27e-08,
+            'clip_range': 0.1,
+            'clip_range_vf': 0.11,
+            'vf_coef': 0.36,
+            'policy_kwargs': dict(
+                net_arch=[dict(pi=[512, 512], vf=[512, 512])],
+                activation_fn=activation['relu']
+            )
         }
 
+    print('loading params:', model_params)
     return model_params
+

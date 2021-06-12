@@ -4,6 +4,7 @@ import pandas as pd
 import random
 from time import perf_counter
 import warnings
+import argparse
 
 from stable_baselines3 import PPO, A2C
 from stable_baselines3.common.env_util import make_vec_env
@@ -15,9 +16,10 @@ from env import CryptoTradingEnv
 from test import run_n_test
 from lib import get_data, load_params
 
-warnings.filterwarnings("ignore")
+#warnings.filterwarnings("ignore")
 
 
+device = 'cpu'
 coins = ['aave', 'algo', 'btc', 'comp', 'eth', 'fil', 'link', 'ltc', 'nmr', 'snx', 'uni', 'xlm', 'xtz', 'yfi']
 coins_str = ','.join(sorted(coins))
 start_time = '2021-01-01T00:00'
@@ -31,10 +33,9 @@ training_split = 0.9
 n_envs = 8
 
 
-if __name__ == '__main__':
+def main():
     study = f'PPO_{policy}_ll{lookback_len}_{coins_str}'
     model_params = load_params(study)
-    print('model_params', model_params)
     
     df = get_data(start_time, end_time, coins)
 
@@ -67,11 +68,10 @@ if __name__ == '__main__':
         )
             
         model = PPO(policy, 
-                    train_env, 
-                    verbose=1, 
-                    n_epochs=epochs,
+                    train_env,
+                    n_epochs=10,
+                    verbose=1,
                     device='cpu',
-                    batch_size=model_params['n_steps'],
                     tensorboard_log='./tensorboard/',
                     **model_params)
 
@@ -100,3 +100,14 @@ if __name__ == '__main__':
         if os.path.isfile(fname + '.zip'):
             model.load(fname)
         run_n_test(model, validation_env, 5, False)
+
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--cuda', action='store_true')
+    args = parser.parse_args()
+
+    if args.cuda:
+        device = 'cuda'
+
+    main()
