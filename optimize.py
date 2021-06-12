@@ -8,6 +8,7 @@ from stable_baselines3 import PPO
 from stable_baselines3.common.env_util import make_vec_env
 from stable_baselines3.common.vec_env import DummyVecEnv
 from stable_baselines3.common.evaluation import evaluate_policy
+from torch import nn as nn
 
 from env import CryptoTradingEnv
 from lib import get_data
@@ -37,12 +38,10 @@ def objective_fn(trial):
     model_params = optimize_ppo(trial)
 
     train_env, validation_env = initialize_envs()  
-    model = PPO(
-        policy, 
-        train_env,
-        device='cpu',
-        batch_size=model_params['n_steps'], # https://github.com/DLR-RM/stable-baselines3/issues/440
-        **model_params)
+    model = PPO(policy, 
+                train_env,
+                device='cpu',
+                **model_params)
 
     train_maxlen = len(train_env.get_attr('df')[0].index) - 1
     model.learn(train_maxlen)
@@ -61,13 +60,44 @@ def objective_fn(trial):
 
 
 def optimize_ppo(trial):
+
+    batch_size = trial.suggest_categorical('batch_size', [8, 16, 32, 64, 128, 256, 512])
+    n_steps = trial.suggest_categorical('n_steps', [8, 16, 32, 64, 128, 256, 512, 1024, 2048])
+    gamma = trial.suggest_loguniform('gamma', 0.9, 0.9999)
+    learning_rate = trial.suggest_loguniform('learning_rate', 1e-5, 1.)
+    ent_coef = trial.suggest_loguniform('ent_coef', 0.00000001, 0.1)
+    gae_lambda = trial.suggest_categorical("gae_lambda", [0.8, 0.9, 0.92, 0.95, 0.98, 0.99, 1.0])
+    max_grad_norm = trial.suggest_categorical('max_grad_norm', [0.3, 0.5, 0.6, 0.7, 0.8, 0.9, 1, 2, 5])
+    clip_range = trial.suggest_categorical("clip_range", [0.1, 0.2, 0.3, 0.4])
+    clip_range_vf = trial.suggest_uniform('cliprange_vf', 0.1, 0.4)
+    vf_coef = trial.suggest_uniform('vf_coef', 0, 1)
+
+    net_arch = trial.suggest_categorical('net_arch', ['small', 'medium', 'large'])
+    activation_fn = trial.suggest_categorical('activation_fn', ['tanh', 'relu', 'elu', 'leaky_relu'])
+
+    net_arch = {
+        'small': [dict(pi=[64, 64], vf=[64, 64])],
+        'medium': [dict(pi=[256, 256], vf=[256, 256])],
+        'large': [dict(pi=[512, 512], vf=[512, 512])]
+    }[net_arch]
+
+    activation_fn = {'tanh': nn.Tanh, 'relu': nn.ReLU, 'elu': nn.ELU, 'leaky_relu': nn.LeakyReLU}[activation_fn]
+
     return {
-        'n_steps': trial.suggest_int('n_steps', 16, 2048),
-        'gamma': trial.suggest_loguniform('gamma', 0.9, 0.9999),
-        'learning_rate': trial.suggest_loguniform('learning_rate', 1e-5, 1.),
-        'ent_coef': trial.suggest_loguniform('ent_coef', 1e-8, 1e-1),
-        'clip_range': trial.suggest_uniform('cliprange', 0.1, 0.4),
-        'clip_range_vf': trial.suggest_uniform('cliprange_vf', 0.1, 0.4)
+        'batch_size': batch_size,
+        'n_steps': n_steps,
+        'gamma': gamma,
+        'learning_rate': learning_rate,
+        'ent_coef': ent_coef,
+        'gae_lambda': gae_lambda,
+        'max_grad_norm': max_grad_norm,
+        'clip_range': clip_range,
+        'clip_range_vf': clip_range_vf,
+        'vf_coef': vf_coef,
+        'policy_kwargs': dict(
+            net_arch=net_arch,
+            activation_fn=activation_fn
+        )
     }
 
 
