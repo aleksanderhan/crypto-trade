@@ -94,7 +94,7 @@ class CryptoTradingEnv(gym.Env):
         self.current_step += 1
         obs = self._next_observation()
 
-        lost_90_percent_net_worth = float(self.net_worth[-1]) < (self.initial_balance / 10)
+        lost_90_percent_net_worth = self.net_worth[-1] < (self.initial_balance / 10)
         done = lost_90_percent_net_worth or self.current_step > self.max_steps
 
         info = {
