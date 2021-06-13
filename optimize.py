@@ -87,7 +87,10 @@ def optimize_ppo(trial):
         'clip_range_vf': clip_range_vf,
         'vf_coef': vf_coef,
         'policy_kwargs': dict(
-            net_arch=[dict(pi=create_layers(policy_net), vf=create_layers(value_net))],
+            net_arch=[dict(
+                pi=create_layers(policy_net), 
+                vf=create_layers(value_net)
+            )],
             activation_fn=activation[activation_fn]
         )
     }

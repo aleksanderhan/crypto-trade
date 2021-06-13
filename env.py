@@ -82,10 +82,10 @@ class CryptoTradingEnv(gym.Env):
         self.rewards.append(reward)
 
         returns = np.diff(self.net_worth)
-        self.sharpe.append(sharpe_ratio(returns))
-        self.sortino.append(sortino_ratio(returns))
-        self.calmar.append(calmar_ratio(returns))
-        self.omega.append(omega_ratio(returns))
+        self.sharpe.append(np.nan_to_num(sharpe_ratio(returns)))
+        self.sortino.append(np.nan_to_num(sortino_ratio(returns)))
+        self.calmar.append(np.nan_to_num(calmar_ratio(returns)))
+        self.omega.append(np.nan_to_num(omega_ratio(returns)))
 
         self.net_worth.append(self._calculate_net_worth())
         if self.net_worth[-1] > self.max_net_worth:
@@ -245,7 +245,7 @@ class CryptoTradingEnv(gym.Env):
 
         # Net worth and balance and rewards
         frame.append(np.diff(np.log(np.array(self.rewards) + 1)))
-        frame.append(np.diff(np.log(np.array(self.balance) + 1))) # +1 dealing with 0 log
+        frame.append(np.diff(np.log(np.array(self.balance) + 1)))
         frame.append(np.diff(np.log(self.net_worth)))
 
         # Risk adjusted performance ratios

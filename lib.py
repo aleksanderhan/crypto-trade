@@ -53,30 +53,32 @@ def load_params(study_name):
             'policy_kwargs': dict(
                 net_arch=[dict(
                     pi=create_layers(params['policy_net']), 
-                    vf=create_layers(params['value_net']))
-                ],
+                    vf=create_layers(params['value_net'])
+                )],
                 activation_fn=activation[params['activation_fn']]
             )
         }
     except Exception as error:
         print(error)
         model_params = {
-            'batch_size': 32,
-            'n_steps': 64,
-            'gamma': 0.98,
-            'learning_rate': 4.12e-05,
-            'gae_lambda': 0.9,
-            'max_grad_norm': 0.5,
-            'ent_coef': 1.27e-08,
-            'clip_range': 0.1,
-            'clip_range_vf': 0.11,
-            'vf_coef': 0.36,
+            'batch_size': 512,
+            'n_steps': 512,
+            'gamma': 0.963,
+            'learning_rate': 0.0024,
+            'gae_lambda': 0.831,
+            'max_grad_norm': 3.71,
+            'ent_coef': 1.06288e-07,
+            'clip_range':  0.227,
+            'clip_range_vf': 0.154,
+            'vf_coef': 0.161,
             'policy_kwargs': dict(
-                net_arch=[dict(pi=[512, 512], vf=[512, 512])],
+                net_arch=[dict(
+                    pi=create_layers('baa'), 
+                    vf=create_layers('cac')
+                )],
                 activation_fn=activation['relu']
             )
         }
 
     print('loading params:', model_params)
     return model_params
-
