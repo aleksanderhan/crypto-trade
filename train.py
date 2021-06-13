@@ -20,12 +20,14 @@ from lib import get_data, load_params
 
 
 device = 'cpu'
-coins = ['aave', 'algo', 'btc', 'comp', 'eth', 'fil', 'link', 'ltc', 'nmr', 'snx', 'uni', 'xlm', 'xtz', 'yfi']
-coins_str = ','.join(sorted(coins))
+coins = list(sorted(['btc', 'eth'])) #list(sorted(['aave', 'algo', 'btc', 'comp', 'eth', 'fil', 'link', 'ltc', 'nmr', 'snx', 'uni', 'xlm', 'xtz', 'yfi']))
+coins_str = ','.join(coins)
+wiki_articles = list(sorted(['Bitcoin', 'Cryptocurrency', 'Ethereum']))
+wiki_articles_str = ','.join(wiki_articles)
 start_time = '2021-01-01T00:00'
 end_time = '2021-05-31T00:00'
 policy = 'MlpPolicy'
-lookback_len = 1440
+lookback_len = 4320
 training_iterations = 100
 epochs = 10
 max_initial_balance = 50000
@@ -34,17 +36,17 @@ n_envs = 8
 
 
 def main():
-    study = f'PPO_{policy}_ll{lookback_len}_{coins_str}'
+    study = f'PPO_{policy}_ll{lookback_len}_{wiki_articles_str}_{coins_str}'
     model_params = load_params(study)
     
-    df = get_data(start_time, end_time, coins)
+    df = get_data(start_time, end_time, coins, wiki_articles)
 
     slice_point = int(len(df.index) * training_split)
     train_df = df[:slice_point]
     test_df = df[slice_point:]
     test_df.reset_index(drop=True, inplace=True)
 
-    validation_env = CryptoTradingEnv(test_df, coins, max_initial_balance, lookback_len)
+    validation_env = CryptoTradingEnv(test_df, coins, wiki_articles, max_initial_balance, lookback_len)
     #check_env(validation_env, warn=True)
     validation_env = make_vec_env(
         lambda: validation_env, 
@@ -59,7 +61,7 @@ def main():
         epochs_df = train_df[start_frame:end_frame]
         epochs_df.reset_index(drop=True, inplace=True)
 
-        train_env = CryptoTradingEnv(epochs_df, coins, max_initial_balance, lookback_len)
+        train_env = CryptoTradingEnv(epochs_df, coins, wiki_articles, max_initial_balance, lookback_len)
         #check_env(train_env, warn=True)
         train_env = make_vec_env(
             lambda: train_env, 
@@ -76,7 +78,7 @@ def main():
                     **model_params)
 
         model_name = model.__class__.__name__
-        fname = f'{model_name}-{policy}-ll{lookback_len}-{coins_str}'
+        fname = f'{model_name}-{policy}-ll{lookback_len}-{wiki_articles_str}-{coins_str}'
         if os.path.isfile(fname + '.zip'):
             model.load(fname)  
 

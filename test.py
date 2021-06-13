@@ -67,17 +67,18 @@ if __name__ == '__main__':
     model_name = fname.split('-')[0]
     policy = fname.split('-')[1]
     lookback_len = int(fname.split('-')[2].strip('ll'))
-    coins = fname.split('-')[-1].split(',')
-    coins_str = ','.join(sorted(coins))
+    wiki_articles_str = fname.split('-')[3]
+    wiki_articles = wiki_articles_str.split(',')
+    coins_str = fname.split('-')[-1]
+    coins_ = coins_str.split(',')
 
+    data = get_data(start_time, end_time, coins, wiki_articles)
 
-    data = get_data(start_time, end_time, coins)
-
-    study_name = f'{model_name}_{policy}_ll{lookback_len}_{coins_str}'
+    study_name = f'{model_name}_{policy}_ll{lookback_len}_{wiki_articles_str}_{coins_str}'
     model_params = load_params(study_name)
 
     env = make_vec_env(
-        lambda: CryptoTradingEnv(data, coins, max_initial_balance, lookback_len), 
+        lambda: CryptoTradingEnv(data, coins, wiki_articles, max_initial_balance, lookback_len), 
         n_envs=1, 
         vec_env_cls=DummyVecEnv
     )

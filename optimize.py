@@ -17,24 +17,31 @@ from lib import get_data, create_layers, activation
 #warnings.filterwarnings("ignore")
 
 device = 'cpu'
-coins = ['aave', 'algo', 'btc', 'comp', 'eth', 'fil', 'link', 'ltc', 'nmr', 'snx', 'uni', 'xlm', 'xtz', 'yfi']
-coins_str = ','.join(sorted(coins))
+coins = list(sorted(['btc', 'eth'])) #list(sorted(['aave', 'algo', 'btc', 'comp', 'eth', 'fil', 'link', 'ltc', 'nmr', 'snx', 'uni', 'xlm', 'xtz', 'yfi']))
+coins_str = ','.join(coins)
+wiki_articles = list(sorted(['Bitcoin', 'Cryptocurrency', 'Ethereum']))
+wiki_articles_str = ','.join(wiki_articles)
 start_time = '2021-01-01T00:00'
 end_time = '2021-02-01T00:00'
 policy = 'MlpPolicy'
 training_split = 0.8
 max_initial_balance = 50000
-lookback_len = 1440
+lookback_len = 4320
 
 
 permutations = [''.join(p) for p in chain.from_iterable(product('abc', repeat=i) for i in range(1, 4))]
 
 
-df = get_data(start_time, end_time, coins)
+df = get_data(start_time, end_time, coins, wiki_articles)
 
 
 def optimize(n_trials=5000):
-    study = optuna.create_study(study_name=f'PPO_{policy}_ll{lookback_len}_{coins_str}', storage='sqlite:///params.db', load_if_exists=True)
+    study = optuna.create_study(
+        study_name=f'PPO_{policy}_ll{lookback_len}_{wiki_articles_str}_{coins_str}', 
+        storage='sqlite:///params.db', 
+        load_if_exists=True
+    )
+    
     study.optimize(objective_fn, n_trials=n_trials)
 
 
@@ -54,7 +61,7 @@ def objective_fn(trial):
     except Exception as error:
         print(error)
         raise optuna.structs.TrialPruned()
-    
+
     mean_reward, _ = evaluate_policy(model, validation_env, n_eval_episodes=3)
 
     if mean_reward == 0:
@@ -108,8 +115,8 @@ def initialize_envs():
     train_df.reset_index(drop=True, inplace=True)
     test_df.reset_index(drop=True, inplace=True)
 
-    train_env = DummyVecEnv([lambda: CryptoTradingEnv(train_df, coins, max_initial_balance, lookback_len)])
-    validation_env = DummyVecEnv([lambda: CryptoTradingEnv(test_df, coins, max_initial_balance, lookback_len)])
+    train_env = DummyVecEnv([lambda: CryptoTradingEnv(train_df, coins, wiki_articles, max_initial_balance, lookback_len)])
+    validation_env = DummyVecEnv([lambda: CryptoTradingEnv(test_df, coins, wiki_articles, max_initial_balance, lookback_len)])
 
     return train_env, validation_env
 

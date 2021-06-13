@@ -20,9 +20,10 @@ activation = {
 }
 
 
-def get_data(start_time, end_time, coins):
-    coinsStr = ','.join(coins)
-    r = requests.get(f'http://127.0.0.1:5000/data?start_time={start_time}&end_time={end_time}&coins={coinsStr}')
+def get_data(start_time, end_time, coins, wiki_articles):
+    coins_str = ','.join(coins)
+    wiki_articles_str = ','.join(wiki_articles)
+    r = requests.get(f'http://127.0.0.1:5000/data?start_time={start_time}&end_time={end_time}&coins={coins_str}&wiki_articles={wiki_articles_str}')
 
     df = pd.DataFrame.from_dict(r.json())
     print(df)
