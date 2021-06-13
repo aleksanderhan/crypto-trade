@@ -91,9 +91,7 @@ def main():
         #train_env.close()
         model = PPO(policy,
                 validation_env, 
-                verbose=1, 
-                n_epochs=epochs,
-                batch_size=model_params['n_steps'],
+                verbose=1,
                 tensorboard_log='./tensorboard/',
                 **model_params)
 

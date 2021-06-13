@@ -48,8 +48,13 @@ def objective_fn(trial):
                 **model_params)
 
     train_maxlen = len(train_env.get_attr('df')[0].index) - 1
-    model.learn(train_maxlen)
 
+    try:
+        model.learn(train_maxlen)
+    except Exception as error:
+        print(error)
+        raise optuna.structs.TrialPruned()
+    
     mean_reward, _ = evaluate_policy(model, validation_env, n_eval_episodes=3)
 
     if mean_reward == 0:

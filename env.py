@@ -293,6 +293,7 @@ class CryptoTradingEnv(gym.Env):
             print(f'Balance: {self.balance[-1]} (Initial balance: {self.initial_balance})')
             print(f'Net worth: {self.net_worth[-1]} (Max net worth: {self.max_net_worth})')
             print(f'Profit: {profit}')
+            print(f'Fees payed: {self.fees_payed}')
             print()
 
         elif mode == 'human':
