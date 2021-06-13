@@ -22,3 +22,10 @@
 ## Tensorboard
 
 * https://towardsdatascience.com/a-quickstart-guide-to-tensorboard-fb1ade69bbcf
+
+
+## Dockerfile tensorflow
+
+docker build . --tag='crypto-trade-tf'
+
+docker run -d --gpus all --name crypto-trade-tf crypto-trade-tf

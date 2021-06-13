@@ -1,13 +1,10 @@
 import numpy as np
 import matplotlib
 matplotlib.use('TkAgg')
-#matplotlib.use('GTK3Agg')
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 from matplotlib import style
 
-# finance module is no longer part of matplotlib
-# see: https://github.com/matplotlib/mpl_finance
 from mplfinance.original_flavor import candlestick_ohlc as candlestick
 
 style.use('dark_background')
@@ -129,7 +126,7 @@ class TradingGraph:
 
     def _render_trades(self, current_step, trades, step_range):
         for trade in trades:
-            if trade['step'] in step_range:
+            if trade['step'] in step_range and trade['coin'] == 'btc':
                 date = self.df['timestamp'].values[trade['step']]
                 high = self.df['btc_high'].values[trade['step']]
                 low = self.df['btc_low'].values[trade['step']]
