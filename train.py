@@ -75,7 +75,7 @@ def main():
                     train_env,
                     n_epochs=10,
                     verbose=1,
-                    device='cpu',
+                    device=device,
                     tensorboard_log='./tensorboard/',
                     **model_params)
 
