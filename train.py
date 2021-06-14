@@ -53,7 +53,7 @@ def main():
         n_envs=1,
         vec_env_cls=DummyVecEnv
     )
-    validation_env = VecNormalize(validation_env, norm_obs=True, norm_reward=False)
+    validation_env = VecNormalize(validation_env, norm_obs=True, norm_reward=False, training=False)
 
     for i in range(training_iterations):
         start_frame = random.randint(0,  int(len(train_df.index*0.9)))
@@ -69,7 +69,7 @@ def main():
             n_envs=n_envs,
             vec_env_cls=SubprocVecEnv
         )
-        train_env = VecNormalize(train_env, norm_obs=True, norm_reward=True)
+        train_env = VecNormalize(train_env, norm_obs=True, norm_reward=True, training=True)
             
         model = PPO(policy, 
                     train_env,

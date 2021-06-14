@@ -82,7 +82,7 @@ if __name__ == '__main__':
         n_envs=1, 
         vec_env_cls=DummyVecEnv
     )
-    env = VecNormalize(env, norm_obs=True, norm_reward=False)
+    env = VecNormalize(env, norm_obs=True, norm_reward=False, training=False)
 
     model = PPO(policy,
                 env, 

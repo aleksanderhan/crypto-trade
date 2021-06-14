@@ -116,9 +116,9 @@ def initialize_envs():
     test_df.reset_index(drop=True, inplace=True)
 
     train_env = DummyVecEnv([lambda: CryptoTradingEnv(train_df, coins, wiki_articles, max_initial_balance, lookback_len)])
-    train_env = VecNormalize(train_env, norm_obs=True, norm_reward=True)
+    train_env = VecNormalize(train_env, norm_obs=True, norm_reward=True, training=True)
     validation_env = DummyVecEnv([lambda: CryptoTradingEnv(test_df, coins, wiki_articles, max_initial_balance, lookback_len)])
-    validation_env = VecNormalize(validation_env, norm_obs=True, norm_reward=False)
+    validation_env = VecNormalize(validation_env, norm_obs=True, norm_reward=False, training=False)
 
     return train_env, validation_env
 
