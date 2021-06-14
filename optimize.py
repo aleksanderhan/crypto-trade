@@ -12,7 +12,7 @@ from stable_baselines3.common.evaluation import evaluate_policy
 from itertools import chain, product
 
 from env import CryptoTradingEnv
-from lib import get_data, create_layers, activation
+from lib import get_data, create_layers, activation, get_optuna_storage
 
 #warnings.filterwarnings("ignore")
 
@@ -29,7 +29,7 @@ max_initial_balance = 50000
 lookback_len = 4320
 
 
-permutations = [''.join(p) for p in chain.from_iterable(product('abcd', repeat=i) for i in range(1, 4))]
+permutations = [''.join(p) for p in chain.from_iterable(product('abc', repeat=i) for i in range(1, 4))]
 permutations = list(filter(lambda nn_arch: nn_arch == ''.join(reversed(sorted(nn_arch))), permutations))
 
 
@@ -39,7 +39,7 @@ df = get_data(start_time, end_time, coins, wiki_articles)
 def optimize(n_trials=5000):
     study = optuna.create_study(
         study_name=f'PPO_{policy}_ll{lookback_len}_{wiki_articles_str}_{coins_str}', 
-        storage='sqlite:///params.db', 
+        storage=get_optuna_storage(), 
         load_if_exists=True
     )
     

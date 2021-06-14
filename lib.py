@@ -37,7 +37,7 @@ def create_layers(permutation):
 
 def load_params(study_name):
     try:
-        study = optuna.load_study(study_name=study_name, storage='sqlite:///params.db')
+        study = optuna.load_study(study_name=study_name, storage=get_optuna_storage())
         params = study.best_trial.params
 
         model_params = {
@@ -83,3 +83,14 @@ def load_params(study_name):
 
     print('loading params:', model_params)
     return model_params
+
+
+def get_optuna_storage():
+    storage = optuna.storages.RDBStorage(
+        url='postgresql://crypto:secret@server:5432/cryptodata',
+        engine_kwargs={
+            'pool_size': 20,
+            'max_overflow': 0
+        }
+    )
+    return storage
