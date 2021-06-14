@@ -14,7 +14,7 @@ from empyrical import sharpe_ratio, sortino_ratio, calmar_ratio, omega_ratio
 
 from visualize import TradingGraph
 
-warnings.filterwarnings("ignore")
+#warnings.filterwarnings("ignore")
 
 
 LOOKBACK_WINDOW_SIZE = 100
@@ -155,7 +155,7 @@ class CryptoTradingEnv(gym.Env):
             if action_type  <= 1 and action_type > 1/3:
                 # Buy amount % of balance in coin
                 total_possible = self.balance[-1] / current_price
-                coins_bought = total_possible * amount * (1 - self.fee)
+                coins_bought = max(0, total_possible * amount * (1 - self.fee))
                 cost = total_possible * current_price * amount
         
                 self.balance.append(self.balance[-1] - cost)
@@ -177,7 +177,7 @@ class CryptoTradingEnv(gym.Env):
 
             elif action_type >= -1 and action_type < -1/3:
                 # Sell amount % of coin held
-                coins_sold = self.portfolio[coin][-1] * amount
+                coins_sold = max(0, self.portfolio[coin][-1] * amount)
                 sell_value = coins_sold * current_price * (1 - self.fee)
 
                 self.balance.append(self.balance[-1] + sell_value)

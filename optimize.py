@@ -30,6 +30,7 @@ lookback_len = 4320
 
 
 permutations = [''.join(p) for p in chain.from_iterable(product('abcd', repeat=i) for i in range(1, 4))]
+permutations = list(filter(lambda nn_arch: nn_arch == ''.join(reversed(sorted(nn_arch))), permutations))
 
 
 df = get_data(start_time, end_time, coins, wiki_articles)
@@ -48,21 +49,26 @@ def optimize(n_trials=5000):
 def objective_fn(trial):
     model_params = optimize_ppo(trial)
 
-    train_env, validation_env = initialize_envs()  
+    train_env, validation_env = initialize_envs()
+    norm_env = VecNormalize(train_env, norm_obs=True, norm_reward=True, training=True)
+
     model = PPO(policy, 
-                train_env,
+                norm_env,
                 device=device,
                 **model_params)
 
     train_maxlen = len(train_env.get_attr('df')[0].index) - 1
-
     try:
         model.learn(train_maxlen)
     except Exception as error:
         print(error)
         raise optuna.structs.TrialPruned()
 
-    mean_reward, _ = evaluate_policy(model, validation_env, n_eval_episodes=5)
+    norm_env.set_venv(validation_env)
+    norm_env.training = False
+    norm_env.norm_reward = False
+
+    mean_reward, _ = evaluate_policy(model, norm_env, n_eval_episodes=5)
 
     if mean_reward == 0:
         raise optuna.structs.TrialPruned()
@@ -116,9 +122,7 @@ def initialize_envs():
     test_df.reset_index(drop=True, inplace=True)
 
     train_env = DummyVecEnv([lambda: CryptoTradingEnv(train_df, coins, wiki_articles, max_initial_balance, lookback_len)])
-    train_env = VecNormalize(train_env, norm_obs=True, norm_reward=True, training=True)
     validation_env = DummyVecEnv([lambda: CryptoTradingEnv(test_df, coins, wiki_articles, max_initial_balance, lookback_len)])
-    validation_env = VecNormalize(validation_env, norm_obs=True, norm_reward=False, training=False)
 
     return train_env, validation_env
 

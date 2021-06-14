@@ -20,6 +20,12 @@ from lib import get_data, load_params
 #warnings.filterwarnings("ignore")
 
 
+start_time = '2021-06-01T00:00'
+end_time = '2021-06-13T00:00'
+max_initial_balance = 10000
+episodes = 1
+
+
 def test_model(model, env, render):
     obs = env.reset()
     done = False
@@ -50,19 +56,7 @@ def run_n_test(model, env, n, render=False):
     print('Total reward:', np.mean(total_rewards), '+/-', np.std(total_rewards))
 
 
-start_time = '2021-06-01T00:00'
-end_time = '2021-06-06T00:00'
-max_initial_balance = 10000
-episodes = 1
-
-
-if __name__ == '__main__':
-    parser = argparse.ArgumentParser()
-    parser.add_argument("-r")
-    parser.add_argument('fname')
-    args = parser.parse_args()
-    print(args)
-
+def main(args):
     fname = args.fname.split('.')[0]
     model_name = fname.split('-')[0]
     policy = fname.split('-')[1]
@@ -72,13 +66,13 @@ if __name__ == '__main__':
     coins_str = fname.split('-')[-1]
     coins = coins_str.split(',')
 
-    data = get_data(start_time, end_time, coins, wiki_articles)
+    df = get_data(start_time, end_time, coins, wiki_articles)
 
     study_name = f'{model_name}_{policy}_ll{lookback_len}_{wiki_articles_str}_{coins_str}'
     model_params = load_params(study_name)
 
     env = make_vec_env(
-        lambda: CryptoTradingEnv(data, coins, wiki_articles, max_initial_balance, lookback_len), 
+        lambda: CryptoTradingEnv(df, coins, wiki_articles, max_initial_balance, lookback_len), 
         n_envs=1, 
         vec_env_cls=DummyVecEnv
     )
@@ -90,10 +84,26 @@ if __name__ == '__main__':
                 tensorboard_log='./tensorboard/',
                 **model_params)
 
-    if os.path.isfile(fname + '.zip'):
-        model.load(fname)
+    model_file = '/model/' + fname
+    vec_norm_file = model_file + '_vec_normalize.pkl'
+    if os.path.isfile(model_file + '.zip'):
+        model.load(model_file)
+    if os.path.isfile(vec_norm_file):
+        train_env.load(vec_norm_file)
 
     #mean_reward, std_reward = evaluate_policy(model, env, deterministic=False, render=bool(args.r), n_eval_episodes=episodes)
     #print('mean_reward:', mean_reward, 'std_reward', std_reward)
 
     run_n_test(model, env, episodes, args.r)
+
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-r")
+    parser.add_argument('fname')
+    args = parser.parse_args()
+    print(args)
+
+    main(args)
+
+    
