@@ -132,3 +132,4 @@ dmypy.json
 *.zip
 params.db
 tensorboard/
+*.pkl
