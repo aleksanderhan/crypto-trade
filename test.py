@@ -10,7 +10,7 @@ from collections import deque
 
 from stable_baselines3 import PPO, A2C
 from stable_baselines3.common.env_util import make_vec_env
-from stable_baselines3.common.vec_env import SubprocVecEnv, DummyVecEnv
+from stable_baselines3.common.vec_env import DummyVecEnv, VecNormalize
 from stable_baselines3.common.evaluation import evaluate_policy
 from stable_baselines3.common.env_checker import check_env
 
@@ -70,7 +70,7 @@ if __name__ == '__main__':
     wiki_articles_str = fname.split('-')[3]
     wiki_articles = wiki_articles_str.split(',')
     coins_str = fname.split('-')[-1]
-    coins_ = coins_str.split(',')
+    coins = coins_str.split(',')
 
     data = get_data(start_time, end_time, coins, wiki_articles)
 
@@ -82,6 +82,7 @@ if __name__ == '__main__':
         n_envs=1, 
         vec_env_cls=DummyVecEnv
     )
+    env = VecNormalize(env, norm_obs=True, norm_reward=False)
 
     model = PPO(policy,
                 env, 

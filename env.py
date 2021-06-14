@@ -113,7 +113,6 @@ class CryptoTradingEnv(gym.Env):
 
 
     def reset(self):
-        # Set the current step to a random point within the data frame
         self.current_step = self.lookback_len
         self.initial_balance = random.randint(1000, self.max_initial_balance)
         self.max_net_worth = self.initial_balance
@@ -251,9 +250,9 @@ class CryptoTradingEnv(gym.Env):
         frame.append(np.diff(np.log(timestamp_values)))
 
         # Net worth and balance and rewards
-        frame.append(np.diff(np.log(np.array(self.rewards) + 1)))
-        frame.append(np.diff(np.log(np.array(self.balance) + 1)))
         frame.append(np.diff(np.log(self.net_worth)))
+        frame.append(np.diff(np.log(np.array(self.balance) + 1)))
+        frame.append(np.diff(np.log(np.array(self.rewards) + 1)))
 
         # Risk adjusted performance ratios
         frame.append(np.diff(np.log(np.array(self.sharpe) + 1)))

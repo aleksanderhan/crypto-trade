@@ -8,7 +8,7 @@ import argparse
 
 from stable_baselines3 import PPO, A2C
 from stable_baselines3.common.env_util import make_vec_env
-from stable_baselines3.common.vec_env import SubprocVecEnv, DummyVecEnv
+from stable_baselines3.common.vec_env import SubprocVecEnv, DummyVecEnv, VecNormalize
 from stable_baselines3.common.evaluation import evaluate_policy
 from stable_baselines3.common.env_checker import check_env
 
@@ -53,6 +53,7 @@ def main():
         n_envs=1,
         vec_env_cls=DummyVecEnv
     )
+    validation_env = VecNormalize(validation_env, norm_obs=True, norm_reward=False)
 
     for i in range(training_iterations):
         start_frame = random.randint(0,  int(len(train_df.index*0.9)))
@@ -68,6 +69,7 @@ def main():
             n_envs=n_envs,
             vec_env_cls=SubprocVecEnv
         )
+        train_env = VecNormalize(train_env, norm_obs=True, norm_reward=True)
             
         model = PPO(policy, 
                     train_env,

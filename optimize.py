@@ -7,7 +7,7 @@ import argparse
 
 from stable_baselines3 import PPO
 from stable_baselines3.common.env_util import make_vec_env
-from stable_baselines3.common.vec_env import DummyVecEnv
+from stable_baselines3.common.vec_env import DummyVecEnv, VecNormalize
 from stable_baselines3.common.evaluation import evaluate_policy
 from itertools import chain, product
 
@@ -62,7 +62,7 @@ def objective_fn(trial):
         print(error)
         raise optuna.structs.TrialPruned()
 
-    mean_reward, _ = evaluate_policy(model, validation_env, n_eval_episodes=3)
+    mean_reward, _ = evaluate_policy(model, validation_env, n_eval_episodes=5)
 
     if mean_reward == 0:
         raise optuna.structs.TrialPruned()
@@ -116,7 +116,9 @@ def initialize_envs():
     test_df.reset_index(drop=True, inplace=True)
 
     train_env = DummyVecEnv([lambda: CryptoTradingEnv(train_df, coins, wiki_articles, max_initial_balance, lookback_len)])
+    train_env = VecNormalize(train_env, norm_obs=True, norm_reward=True)
     validation_env = DummyVecEnv([lambda: CryptoTradingEnv(test_df, coins, wiki_articles, max_initial_balance, lookback_len)])
+    validation_env = VecNormalize(validation_env, norm_obs=True, norm_reward=False)
 
     return train_env, validation_env
 
