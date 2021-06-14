@@ -17,7 +17,7 @@ from stable_baselines3.common.env_checker import check_env
 from env import CryptoTradingEnv
 from lib import get_data, load_params
 
-#warnings.filterwarnings("ignore")
+warnings.filterwarnings("ignore")
 
 
 start_time = '2021-06-01T00:00'

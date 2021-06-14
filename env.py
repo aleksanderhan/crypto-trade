@@ -14,7 +14,7 @@ from empyrical import sharpe_ratio, sortino_ratio, calmar_ratio, omega_ratio
 
 from visualize import TradingGraph
 
-#warnings.filterwarnings("ignore")
+warnings.filterwarnings("ignore")
 
 
 LOOKBACK_WINDOW_SIZE = 100

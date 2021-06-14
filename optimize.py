@@ -14,7 +14,7 @@ from itertools import chain, product
 from env import CryptoTradingEnv
 from lib import get_data, create_layers, activation, get_optuna_storage
 
-#warnings.filterwarnings("ignore")
+warnings.filterwarnings("ignore")
 
 device = 'cpu'
 coins = list(sorted(['btc', 'eth'])) #list(sorted(['aave', 'algo', 'btc', 'comp', 'eth', 'fil', 'link', 'ltc', 'nmr', 'snx', 'uni', 'xlm', 'xtz', 'yfi']))
