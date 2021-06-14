@@ -94,3 +94,8 @@ def get_optuna_storage():
         }
     )
     return storage
+
+
+def delete_optuna_study(study_name):
+    optuna.delete_study(study_name=study_name, storage=get_optuna_storage())
+
