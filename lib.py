@@ -82,4 +82,4 @@ def load_params(study_name):
         }
 
     print('loading params:', model_params)
-    return model_param
+    return model_params
