@@ -29,7 +29,7 @@ max_initial_balance = 50000
 lookback_len = 4320
 
 
-permutations = [''.join(p) for p in chain.from_iterable(product('abc', repeat=i) for i in range(1, 4))]
+permutations = [''.join(p) for p in chain.from_iterable(product('abcd', repeat=i) for i in range(1, 4))]
 
 
 df = get_data(start_time, end_time, coins, wiki_articles)

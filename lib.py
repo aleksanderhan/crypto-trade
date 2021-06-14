@@ -74,12 +74,12 @@ def load_params(study_name):
             'vf_coef': 0.161,
             'policy_kwargs': dict(
                 net_arch=[dict(
-                    pi=create_layers('baa'), 
-                    vf=create_layers('cac')
+                    pi=create_layers('ccb'), 
+                    vf=create_layers('ccb')
                 )],
                 activation_fn=activation['relu']
             )
         }
 
     print('loading params:', model_params)
-    return model_params
+    return model_param
