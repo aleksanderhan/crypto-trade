@@ -7,7 +7,7 @@ import argparse
 
 from stable_baselines3 import PPO
 from stable_baselines3.common.env_util import make_vec_env
-from stable_baselines3.common.vec_env import DummyVecEnv, VecNormalize
+from stable_baselines3.common.vec_env import DummyVecEnv, VecNormalize, sync_envs_normalization
 from stable_baselines3.common.evaluation import evaluate_policy
 from itertools import chain, product
 
@@ -50,10 +50,9 @@ def objective_fn(trial):
     model_params = optimize_ppo(trial)
 
     train_env, validation_env = initialize_envs()
-    norm_env = VecNormalize(train_env, norm_obs=True, norm_reward=True, training=True)
 
     model = PPO(policy, 
-                norm_env,
+                train_env,
                 device=device,
                 **model_params)
 
@@ -64,11 +63,8 @@ def objective_fn(trial):
         print(error)
         raise optuna.structs.TrialPruned()
 
-    norm_env.set_venv(validation_env)
-    norm_env.training = False
-    norm_env.norm_reward = False
-
-    mean_reward, _ = evaluate_policy(model, norm_env, n_eval_episodes=5)
+    sync_envs_normalization(train_env, validation_env)
+    mean_reward, _ = evaluate_policy(model, validation_env, n_eval_episodes=5)
 
     if mean_reward == 0:
         raise optuna.structs.TrialPruned()
@@ -122,7 +118,9 @@ def initialize_envs():
     test_df.reset_index(drop=True, inplace=True)
 
     train_env = DummyVecEnv([lambda: CryptoTradingEnv(train_df, coins, wiki_articles, max_initial_balance, lookback_len)])
+    train_env = VecNormalize(train_env, norm_obs=True, norm_reward=True, training=True)
     validation_env = DummyVecEnv([lambda: CryptoTradingEnv(test_df, coins, wiki_articles, max_initial_balance, lookback_len)])
+    validation_env = VecNormalize(train_env, norm_obs=True, norm_reward=False, training=False)
 
     return train_env, validation_env
 

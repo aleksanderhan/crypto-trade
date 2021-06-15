@@ -57,18 +57,18 @@ def run_n_test(model, env, n, render=False):
 
 
 def main(args):
-    fname = args.fname.split('.')[0]
-    model_name = fname.split('-')[0]
-    policy = fname.split('-')[1]
-    lookback_len = int(fname.split('-')[2].strip('ll'))
-    wiki_articles_str = fname.split('-')[3]
+    model_file = args.model_file.split('.')[0]
+    algo = model_file.split('-')[0]
+    policy = model_file.split('-')[1]
+    lookback_len = int(model_file.split('-')[2].strip('ll'))
+    wiki_articles_str = model_file.split('-')[3]
     wiki_articles = wiki_articles_str.split(',')
-    coins_str = fname.split('-')[-1]
+    coins_str = model_file.split('-')[-1]
     coins = coins_str.split(',')
 
     df = get_data(start_time, end_time, coins, wiki_articles)
 
-    study_name = f'{model_name}_{policy}_ll{lookback_len}_{wiki_articles_str}_{coins_str}'
+    study_name = f'{algo}_{policy}_ll{lookback_len}_{wiki_articles_str}_{coins_str}'
     model_params = load_params(study_name)
 
     env = make_vec_env(
@@ -84,7 +84,6 @@ def main(args):
                 tensorboard_log='./tensorboard/',
                 **model_params)
 
-    model_file = '/model/' + fname
     vec_norm_file = model_file + '_vec_normalize.pkl'
     if os.path.isfile(model_file + '.zip'):
         model.load(model_file)
@@ -100,7 +99,7 @@ def main(args):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("-r")
-    parser.add_argument('fname')
+    parser.add_argument('model_file')
     args = parser.parse_args()
     print(args)
 
