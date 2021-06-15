@@ -47,7 +47,7 @@ def optimize(n_trials=5000):
 
 
 def objective_fn(trial):
-    model_params = optimize_ppo(trial)
+    model_params = sample_hyperparameters(trial)
 
     train_env, validation_env = initialize_envs()
 
@@ -72,7 +72,7 @@ def objective_fn(trial):
     return -mean_reward
 
 
-def optimize_ppo(trial):
+def sample_hyperparameters(trial):
 
     batch_size = trial.suggest_categorical('batch_size', [8, 16, 32, 64, 128, 256, 512])
     n_steps = trial.suggest_categorical('n_steps', [8, 16, 32, 64, 128, 256, 512, 1024, 2048])
@@ -82,7 +82,7 @@ def optimize_ppo(trial):
     gae_lambda = trial.suggest_uniform("gae_lambda", 0.8, 1.0)
     max_grad_norm = trial.suggest_loguniform('max_grad_norm', 0.3, 5)
     clip_range = trial.suggest_uniform("clip_range", 0.1, 0.4)
-    clip_range_vf = trial.suggest_uniform('cliprange_vf', 0.1, 0.4)
+    clip_range_vf = trial.suggest_uniform('clip_range_vf', 0.1, 0.4)
     vf_coef = trial.suggest_uniform('vf_coef', 0, 1)
 
     value_net = trial.suggest_categorical('value_net', permutations)

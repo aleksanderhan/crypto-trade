@@ -37,8 +37,9 @@ def create_layers(permutation):
 
 def load_params(study_name):
     try:
-        study = optuna.load_study(study_name=study_name, storage=get_optuna_storage())
+        study = load_optuna_study(study_name)
         params = study.best_trial.params
+        print(params)
 
         model_params = {
             'batch_size': params['batch_size'],
@@ -62,22 +63,22 @@ def load_params(study_name):
     except Exception as error:
         print(error)
         model_params = {
-            'batch_size': 512,
-            'n_steps': 512,
-            'gamma': 0.963,
-            'learning_rate': 0.0024,
-            'gae_lambda': 0.831,
-            'max_grad_norm': 3.71,
-            'ent_coef': 1.06288e-07,
-            'clip_range':  0.227,
-            'clip_range_vf': 0.154,
-            'vf_coef': 0.161,
+            'batch_size': 256,
+            'n_steps': 1024,
+            'gamma': 0.93767569,
+            'learning_rate': 0.0907,
+            'gae_lambda': 0.8684673,
+            'max_grad_norm': 0.715889,
+            'ent_coef': 0.00104386,
+            'clip_range':  0.23127,
+            'clip_range_vf': 0.3195,
+            'vf_coef': 0.53873,
             'policy_kwargs': dict(
                 net_arch=[dict(
-                    pi=create_layers('ccb'), 
-                    vf=create_layers('ccb')
+                    pi=create_layers('baa'), 
+                    vf=create_layers('bbb')
                 )],
-                activation_fn=activation['relu']
+                activation_fn=activation['leaky_relu']
             )
         }
 
@@ -98,4 +99,8 @@ def get_optuna_storage():
 
 def delete_optuna_study(study_name):
     optuna.delete_study(study_name=study_name, storage=get_optuna_storage())
+
+
+def load_optuna_study(study_name):
+    return optuna.load_study(study_name=study_name, storage=get_optuna_storage())
 

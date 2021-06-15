@@ -5,3 +5,4 @@ optuna
 gym
 Pillow
 mplfinance
+plotly
