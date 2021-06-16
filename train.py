@@ -39,25 +39,18 @@ def create_env(df):
     check_env(env, warn=True)
     return env
 
-def load_training_env(df, vec_norm_file):
-    env = make_vec_env(
-        lambda: create_env(df), 
-        n_envs=n_envs,
-        vec_env_cls=SubprocVecEnv
-    )
-    if os.path.isfile(vec_norm_file):
-        return VecNormalize.load(vec_norm_file, env, norm_obs=True, norm_reward=True, training=True)
-    else:
-        return VecNormalize(env, norm_obs=True, norm_reward=True, training=True)
-
-def load_validation_env(df, vec_norm_file):
+def load_env(df, vec_norm_file, n_envs, vec_env_cls, norm_obs, norm_reward, training):
     env = make_vec_env(
         lambda: create_env(df), 
         n_envs=1,
         vec_env_cls=DummyVecEnv
     )
     if os.path.isfile(vec_norm_file):
-        return VecNormalize.load(vec_norm_file, env, norm_obs=True, norm_reward=False, training=False)
+        env = VecNormalize.load(vec_norm_file, env)
+        env.norm_obs = True
+        env.norm_reward = False
+        env.training = False
+        return env
     else:
         return VecNormalize(env, norm_obs=True, norm_reward=False, training=False)
 
@@ -99,7 +92,7 @@ def main():
         epoch_df.reset_index(drop=True, inplace=True)
 
         # Train model
-        train_env = load_training_env(epoch_df, vec_norm_file)
+        train_env = load_env(epoch_df, vec_norm_file, n_envs=n_envs, vec_env_cls=SubprocVecEnv, norm_obs=True, norm_reward=True, training=True)
         model = load_model(train_env, model_params, model_file)
         
         for e in range(epochs):
@@ -112,7 +105,7 @@ def main():
             train_env.save(vec_norm_file)
 
         # Evaluate model
-        validation_env = load_validation_env(test_df, vec_norm_file)
+        validation_env = load_env(test_df, vec_norm_file, n_envs=1, vec_env_cls=DummyVecEnv, norm_obs=True, norm_reward=False, training=False)
         model = load_model(validation_env, model_params, model_file)
 
         run_n_test(model, validation_env, 5, False)

@@ -78,17 +78,23 @@ def main(args):
     )
     env = VecNormalize(env, norm_obs=True, norm_reward=False, training=False)
 
+    vec_norm_file = model_file + '_vec_normalize.pkl'
+    if os.path.isfile(vec_norm_file):
+        env = VecNormalize.load(vec_norm_file, env)
+        env.norm_obs = True
+        env.norm_reward = False
+        env.training = False
+    else:
+        env = VecNormalize(env, norm_obs=True, norm_reward=False, training=False)
+
     model = PPO(policy,
                 env, 
                 verbose=1,
                 tensorboard_log='./tensorboard/',
                 **model_params)
 
-    vec_norm_file = model_file + '_vec_normalize.pkl'
     if os.path.isfile(model_file + '.zip'):
         model.load(model_file)
-    if os.path.isfile(vec_norm_file):
-        train_env.load(vec_norm_file)
 
     #mean_reward, std_reward = evaluate_policy(model, env, deterministic=False, render=bool(args.r), n_eval_episodes=episodes)
     #print('mean_reward:', mean_reward, 'std_reward', std_reward)

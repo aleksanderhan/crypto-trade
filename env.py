@@ -300,6 +300,11 @@ class CryptoTradingEnv(gym.Env):
             print(f'Net worth: {self.net_worth[-1]} (Max net worth: {self.max_net_worth})')
             print(f'Profit: {profit}')
             print(f'Fees payed: {self.fees_payed}')
+            print(f'Sharpe {self.sharpe[-1]}')
+            print(f'Sortino {self.sortino[-1]}')
+            print(f'Calmar {self.calmar[-1]}')
+            print(f'Omega {self.omega[-1]}')
+            print(f'Reward {self.rewards[-1]}')
             print()
 
         elif mode == 'human':

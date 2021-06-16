@@ -39,7 +39,6 @@ def load_params(study_name):
     try:
         study = load_optuna_study(study_name)
         params = study.best_trial.params
-        print(params)
 
         model_params = {
             'batch_size': params['batch_size'],
