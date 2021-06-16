@@ -18,13 +18,13 @@ from lib import get_data, load_params
 
 warnings.filterwarnings("ignore")
 
+device = 'cpu'
 model_dir = 'model/'
 algo = 'PPO'
-device = 'cpu'
 coins = list(sorted(['btc', 'eth'])) #list(sorted(['aave', 'algo', 'btc', 'comp', 'eth', 'fil', 'link', 'ltc', 'nmr', 'snx', 'uni', 'xlm', 'xtz', 'yfi']))
 wiki_articles = list(sorted(['Bitcoin', 'Cryptocurrency', 'Ethereum']))
-start_time = '2017-01-01T00:00'
-end_time = '2021-06-01T00:00'
+start_time = '2021-06-01T00:00'
+end_time = '2021-06-08T00:00'
 policy = 'MlpPolicy'
 lookback_len = 4320 # 3 days
 training_iterations = 100
@@ -75,6 +75,7 @@ def main():
     study = f'PPO_{policy}_ll{lookback_len}_{wiki_articles_str}_{coins_str}'
 
     model_params = load_params(study)
+    model_params['n_steps'] = 512
     df = get_data(start_time, end_time, coins, wiki_articles)
 
     slice_point = int(len(df.index) * training_split)
