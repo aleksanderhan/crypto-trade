@@ -74,8 +74,8 @@ def objective_fn(trial):
 
 def sample_hyperparameters(trial):
 
-    batch_size = trial.suggest_categorical('batch_size', [8, 16, 32, 64, 128, 256, 512])
-    n_steps = trial.suggest_categorical('n_steps', [8, 16, 32, 64, 128, 256, 512, 1024, 2048])
+    batch_size = trial.suggest_categorical('batch_size', [32, 64, 128, 256, 512])
+    n_steps = trial.suggest_categorical('n_steps', [128, 256, 512, 1024, 2048])
     gamma = trial.suggest_loguniform('gamma', 0.9, 0.9999)
     learning_rate = trial.suggest_loguniform('learning_rate', 1e-5, 1.)
     ent_coef = trial.suggest_loguniform('ent_coef', 0.00000001, 0.1)

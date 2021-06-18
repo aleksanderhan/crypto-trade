@@ -1,6 +1,7 @@
 import requests
 import optuna
 import pandas as pd
+import os
 
 from torch import nn as nn
 
@@ -103,3 +104,13 @@ def delete_optuna_study(study_name):
 def load_optuna_study(study_name):
     return optuna.load_study(study_name=study_name, storage=get_optuna_storage())
 
+
+def uniquename(wish):
+    parts = os.path.splitext(wish)
+    i = 0
+    while True:
+        name = parts[0] + (str(i) if i > 0 else '') + parts[1]
+        if os.path.isfile(name):
+            i += 1
+        else:
+            yield name

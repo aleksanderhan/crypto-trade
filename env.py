@@ -60,7 +60,7 @@ class CryptoTradingEnv(gym.Env):
         
         # (num_coins * (portfolio amount & portfolio value & candles) + (balance & net worth & timestamp)) + wiki pageviews
         observation_space_len = (len(coins) * 7 * (lookback_len -1)) + (3 * (lookback_len -1)) + (len(wiki_articles) * (lookback_len - 1))
-        print('observation_space_len', observation_space_len)
+        #print('observation_space_len', observation_space_len)
         self.observation_space = spaces.Box(
             low=-MAX_VALUE,
             high=MAX_VALUE, 
@@ -79,7 +79,7 @@ class CryptoTradingEnv(gym.Env):
             self.max_net_worth = self.net_worth[-1]
 
         reward = self._get_reward()
-        print('reward', reward)
+
         self.current_step += 1
         obs = self._next_observation()
 
@@ -202,7 +202,6 @@ class CryptoTradingEnv(gym.Env):
         for article in self.wiki_articles:
             # wikipedia pageviews
             pageviews = self.df.loc[self.current_step - self.lookback_len: self.current_step - 1, article + '_pageviews'].values
-            print(f'pageviews {article}', len(pageviews))
             frame.append(np.diff(np.log(pageviews)))
 
         # Time
@@ -216,7 +215,7 @@ class CryptoTradingEnv(gym.Env):
         obs = np.nan_to_num(np.concatenate(frame), posinf=MAX_VALUE, neginf=-MAX_VALUE)
         t1 = perf_counter()
         #print('obs_dt', t1-t0)
-        print('len obs', len(obs))
+        #print('obs len', len(obs))
         return obs
 
 

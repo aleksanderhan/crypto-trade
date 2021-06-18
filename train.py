@@ -10,7 +10,6 @@ from stable_baselines3 import PPO, A2C
 from stable_baselines3.common.env_util import make_vec_env
 from stable_baselines3.common.vec_env import SubprocVecEnv, DummyVecEnv, VecNormalize
 from stable_baselines3.common.evaluation import evaluate_policy
-from stable_baselines3.common.env_checker import check_env
 
 from env import CryptoTradingEnv
 from test import run_n_test
@@ -24,7 +23,7 @@ algo = 'PPO'
 coins = list(sorted(['btc', 'eth'])) #list(sorted(['aave', 'algo', 'btc', 'comp', 'eth', 'fil', 'link', 'ltc', 'nmr', 'snx', 'uni', 'xlm', 'xtz', 'yfi']))
 wiki_articles = list(sorted(['Bitcoin', 'Cryptocurrency', 'Ethereum']))
 start_time = '2021-06-01T00:00'
-end_time = '2021-06-08T00:00'
+end_time = '2021-06-06T00:00'
 policy = 'MlpPolicy'
 lookback_len = 4320 # 3 days
 training_iterations = 100
@@ -36,7 +35,6 @@ n_envs = 8
 
 def create_env(df):
     env = CryptoTradingEnv(df, coins, wiki_articles, max_initial_balance, lookback_len)
-    check_env(env, warn=True)
     return env
 
 def load_env(df, vec_norm_file, n_envs, vec_env_cls, norm_obs, norm_reward, training):
