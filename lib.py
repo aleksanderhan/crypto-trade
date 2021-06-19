@@ -21,10 +21,11 @@ activation = {
 }
 
 
-def get_data(start_time, end_time, coins, wiki_articles):
+def get_data(start_time, end_time, coins, wiki_articles, trend_keywords):
     coins_str = ','.join(coins)
     wiki_articles_str = ','.join(wiki_articles)
-    r = requests.get(f'http://127.0.0.1:5000/data?start_time={start_time}&end_time={end_time}&coins={coins_str}&wiki_articles={wiki_articles_str}')
+    trend_keywords_str = ','.join(trend_keywords)
+    r = requests.get(f'http://127.0.0.1:5000/data?start_time={start_time}&end_time={end_time}&coins={coins_str}&wiki_articles={wiki_articles_str}&trend_keywords={trend_keywords_str}')
 
     df = pd.DataFrame.from_dict(r.json())
     print(df)
@@ -103,6 +104,9 @@ def delete_optuna_study(study_name):
 
 def load_optuna_study(study_name):
     return optuna.load_study(study_name=study_name, storage=get_optuna_storage())
+
+def list_studies():
+    return optuna.get_all_study_summaries(storage=get_optuna_storage())
 
 
 def uniquename(wish):

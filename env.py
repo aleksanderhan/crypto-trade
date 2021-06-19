@@ -27,7 +27,6 @@ class CryptoTradingEnv(gym.Env):
     def __init__(self, 
                 df, 
                 coins,
-                wiki_articles,
                 max_initial_balance,
                 lookback_len=1440,
                 fee=0.005):
@@ -37,7 +36,6 @@ class CryptoTradingEnv(gym.Env):
         self.visualization = None
         self.df = df.fillna(method='bfill')
         self.coins = coins
-        self.wiki_articles = wiki_articles
         self.fee = fee
         self.max_steps = len(df.index) - 1
         self.lookback_len = lookback_len
@@ -58,8 +56,8 @@ class CryptoTradingEnv(gym.Env):
         # Buy/sell/hold for each coin
         self.action_space = spaces.Box(low=np.array([-1, -1, -1], dtype=np.float32), high=np.array([1, 1, 1], dtype=np.float32), dtype=np.float32)
         
-        # (num_coins * (portfolio amount & portfolio value & candles) + (balance & net worth & timestamp)) + wiki pageviews
-        observation_space_len = (len(coins) * 7 * (lookback_len -1)) + (3 * (lookback_len -1)) + (len(wiki_articles) * (lookback_len - 1))
+        # (features & balance & net worth & portfolio) * (lookback_len - 1)
+        observation_space_len = (len(df.columns) + 2 + 2*(len(coins))) * (lookback_len -1)
         #print('observation_space_len', observation_space_len)
         self.observation_space = spaces.Box(
             low=-MAX_VALUE,
@@ -120,7 +118,7 @@ class CryptoTradingEnv(gym.Env):
 
     def _get_reward(self):
         returns = np.diff(self.net_worth)
-        return np.nan_to_num(sortino_ratio(returns))
+        return np.nan_to_num(sortino_ratio(returns), posinf=0, neginf=0)
 
 
     def _take_action(self, action):
@@ -182,40 +180,23 @@ class CryptoTradingEnv(gym.Env):
     def _next_observation(self):
         t0 = perf_counter()
         frame = []
-        for coin in self.coins:
-            # Price data
-            open_values = self.df.loc[self.current_step - self.lookback_len: self.current_step - 1, coin + '_open'].values
-            high_values = self.df.loc[self.current_step - self.lookback_len: self.current_step - 1, coin + '_high'].values
-            low_values = self.df.loc[self.current_step - self.lookback_len: self.current_step - 1, coin + '_low'].values
-            close_values = self.df.loc[self.current_step - self.lookback_len: self.current_step - 1, coin + '_close'].values
-            volume_values = self.df.loc[self.current_step - self.lookback_len: self.current_step - 1, coin + '_volume'].values
-            frame.append(np.diff(np.log(open_values)))
-            frame.append(np.diff(np.log(high_values)))
-            frame.append(np.diff(np.log(low_values)))
-            frame.append(np.diff(np.log(close_values)))
-            frame.append(np.diff(np.log(volume_values)))
 
-            # Portfolio
-            frame.append(np.diff(np.log(np.array(self.portfolio[coin]) + 1))) # +1 dealing with 0 log
+        for feature in self.df.columns:
+            values = self.df.loc[self.current_step - self.lookback_len: self.current_step - 1, feature].values
+            frame.append(np.diff(np.log(values + 1)))
+
+        # Portfolio
+        for coin in self.coins:
+            frame.append(np.diff(np.log(np.array(self.portfolio[coin]) + 1)))
             frame.append(np.diff(np.log(np.array(self.portfolio_value[coin]) + 1)))
 
-        for article in self.wiki_articles:
-            # wikipedia pageviews
-            pageviews = self.df.loc[self.current_step - self.lookback_len: self.current_step - 1, article + '_pageviews'].values
-            frame.append(np.diff(np.log(pageviews)))
-
-        # Time
-        timestamp_values = self.df.loc[self.current_step - self.lookback_len: self.current_step - 1, 'timestamp'].values
-        frame.append(np.diff(np.log(timestamp_values)))
-
         # Net worth and balance
-        frame.append(np.diff(np.log(self.net_worth)))
+        frame.append(np.diff(np.log(np.array(self.net_worth) + 1)))
         frame.append(np.diff(np.log(np.array(self.balance) + 1)))
 
         obs = np.nan_to_num(np.concatenate(frame), posinf=MAX_VALUE, neginf=-MAX_VALUE)
         t1 = perf_counter()
         #print('obs_dt', t1-t0)
-        #print('obs len', len(obs))
         return obs
 
 

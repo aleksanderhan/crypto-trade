@@ -58,21 +58,22 @@ def run_n_test(model, env, n, render=False):
 
 def main(args):
     model_file = args.model_file.split('.')[0]
-    algo = model_file.split('-')[0]
-    policy = model_file.split('-')[1]
-    lookback_len = int(model_file.split('-')[2].strip('ll'))
-    wiki_articles_str = model_file.split('-')[3]
+    policy = model_file.split('_')[1].strip('p-')
+    lookback_len = int(model_file.split('_')[2].strip('ll-'))
+    wiki_articles_str = model_file.split('_')[3].strip('wpv-')
     wiki_articles = wiki_articles_str.split(',')
-    coins_str = model_file.split('-')[-1]
+    trend_keywords_str = model_file.split('_')[4].strip('gt-')
+    trend_keywords = trend_keywords_str.split(',')
+    coins_str = model_file.split('_')[-1].strip('c-')
     coins = coins_str.split(',')
 
-    df = get_data(start_time, end_time, coins, wiki_articles)
+    df = get_data(start_time, end_time, coins, wiki_articles, trend_keywords)
 
-    study_name = f'{algo}_{policy}_ll{lookback_len}_{wiki_articles_str}_{coins_str}'
+    study_name = f'PPO_p-{policy}_ll-{lookback_len}_wpv-{wiki_articles_str}_gt-{trend_keywords_str}_c-{coins_str}'
     model_params = load_params(study_name)
 
     env = make_vec_env(
-        lambda: CryptoTradingEnv(df, coins, wiki_articles, max_initial_balance, lookback_len), 
+        lambda: CryptoTradingEnv(df, coins, max_initial_balance, lookback_len), 
         n_envs=1, 
         vec_env_cls=DummyVecEnv
     )
