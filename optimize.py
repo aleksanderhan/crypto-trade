@@ -21,24 +21,26 @@ coins = list(sorted(['btc', 'eth'])) #list(sorted(['aave', 'algo', 'btc', 'comp'
 coins_str = ','.join(coins)
 wiki_articles = list(sorted(['Bitcoin', 'Cryptocurrency', 'Ethereum']))
 wiki_articles_str = ','.join(wiki_articles)
-start_time = '2021-01-01T00:00'
-end_time = '2021-02-01T00:00'
+trend_keywords = list(sorted(['bitcoin', 'ethereum']))
+trend_keywords_str = ','.join(trend_keywords)
+start_time = '2021-05-01T00:00'
+end_time = '2021-06-17T00:00'
 policy = 'MlpPolicy'
 training_split = 0.8
 max_initial_balance = 50000
 lookback_len = 4320
 
 
-permutations = [''.join(p) for p in chain.from_iterable(product('abc', repeat=i) for i in range(1, 4))]
+permutations = [''.join(p) for p in chain.from_iterable(product('abc', repeat=i) for i in range(1, 5))]
 permutations = list(filter(lambda nn_arch: nn_arch == ''.join(reversed(sorted(nn_arch))), permutations))
 
 
-df = get_data(start_time, end_time, coins, wiki_articles)
+df = get_data(start_time, end_time, coins, wiki_articles, trend_keywords)
 
 
 def optimize(n_trials=5000):
     study = optuna.create_study(
-        study_name=f'PPO_{policy}_ll{lookback_len}_{wiki_articles_str}_{coins_str}', 
+        study_name=f'PPO_p-{policy}_ll-{lookback_len}_wpv-{wiki_articles_str}_gt-{trend_keywords_str}_c-{coins_str}', 
         storage=get_optuna_storage(), 
         load_if_exists=True
     )
@@ -74,8 +76,8 @@ def objective_fn(trial):
 
 def sample_hyperparameters(trial):
 
-    batch_size = trial.suggest_categorical('batch_size', [8, 16, 32, 64, 128, 256, 512])
-    n_steps = trial.suggest_categorical('n_steps', [8, 16, 32, 64, 128, 256, 512, 1024, 2048])
+    batch_size = trial.suggest_categorical('batch_size', [32, 64, 128, 256, 512])
+    n_steps = trial.suggest_categorical('n_steps', [128, 256, 512, 1024, 2048])
     gamma = trial.suggest_loguniform('gamma', 0.9, 0.9999)
     learning_rate = trial.suggest_loguniform('learning_rate', 1e-5, 1.)
     ent_coef = trial.suggest_loguniform('ent_coef', 0.00000001, 0.1)
@@ -117,9 +119,9 @@ def initialize_envs():
     train_df.reset_index(drop=True, inplace=True)
     test_df.reset_index(drop=True, inplace=True)
 
-    train_env = DummyVecEnv([lambda: CryptoTradingEnv(train_df, coins, wiki_articles, max_initial_balance, lookback_len)])
+    train_env = DummyVecEnv([lambda: CryptoTradingEnv(train_df, coins, max_initial_balance, lookback_len)])
     train_env = VecNormalize(train_env, norm_obs=True, norm_reward=True, training=True)
-    validation_env = DummyVecEnv([lambda: CryptoTradingEnv(test_df, coins, wiki_articles, max_initial_balance, lookback_len)])
+    validation_env = DummyVecEnv([lambda: CryptoTradingEnv(test_df, coins, max_initial_balance, lookback_len)])
     validation_env = VecNormalize(train_env, norm_obs=True, norm_reward=False, training=False)
 
     return train_env, validation_env

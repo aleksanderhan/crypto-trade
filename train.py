@@ -7,10 +7,10 @@ import argparse
 from time import perf_counter
 
 from stable_baselines3 import PPO, A2C
+from stable_baselines3.common.env_checker import check_env
 from stable_baselines3.common.env_util import make_vec_env
 from stable_baselines3.common.vec_env import SubprocVecEnv, DummyVecEnv, VecNormalize
 from stable_baselines3.common.evaluation import evaluate_policy
-from stable_baselines3.common.env_checker import check_env
 
 from env import CryptoTradingEnv
 from test import run_n_test
@@ -18,13 +18,14 @@ from lib import get_data, load_params
 
 warnings.filterwarnings("ignore")
 
+device = 'cpu'
 model_dir = 'model/'
 algo = 'PPO'
-device = 'cpu'
 coins = list(sorted(['btc', 'eth'])) #list(sorted(['aave', 'algo', 'btc', 'comp', 'eth', 'fil', 'link', 'ltc', 'nmr', 'snx', 'uni', 'xlm', 'xtz', 'yfi']))
-wiki_articles = list(sorted(['Bitcoin', 'Cryptocurrency', 'Ethereum']))
-start_time = '2017-01-01T00:00'
-end_time = '2021-06-01T00:00'
+wiki_articles = list(sorted(['Bitcoin', 'Ethereum']))
+trend_keywords = list(sorted(['bitcoin', 'ethereum']))
+start_time = '2021-06-01T00:00'
+end_time = '2021-06-06T00:00'
 policy = 'MlpPolicy'
 lookback_len = 4320 # 3 days
 training_iterations = 100
@@ -35,7 +36,7 @@ n_envs = 8
 
 
 def create_env(df):
-    env = CryptoTradingEnv(df, coins, wiki_articles, max_initial_balance, lookback_len)
+    env = CryptoTradingEnv(df, coins, max_initial_balance, lookback_len)
     check_env(env, warn=True)
     return env
 
@@ -72,17 +73,19 @@ def load_model(env, model_params, model_file):
 def main():
     coins_str = ','.join(coins)
     wiki_articles_str = ','.join(wiki_articles)
-    study = f'PPO_{policy}_ll{lookback_len}_{wiki_articles_str}_{coins_str}'
+    trend_keywords_str = ','.join(trend_keywords)
+    study = f'PPO_p-{policy}_ll-{lookback_len}_wpv-{wiki_articles_str}_gt-{trend_keywords_str}_c-{coins_str}'
 
     model_params = load_params(study)
-    df = get_data(start_time, end_time, coins, wiki_articles)
+    model_params['n_steps'] = 512
+    df = get_data(start_time, end_time, coins, wiki_articles, trend_keywords)
 
     slice_point = int(len(df.index) * training_split)
     train_df = df[:slice_point]
     test_df = df[slice_point:]
     test_df.reset_index(drop=True, inplace=True)
 
-    model_file = f'{algo}-{policy}-ll{lookback_len}-{wiki_articles_str}-{coins_str}'
+    model_file = f'PPO_p-{policy}_ll-{lookback_len}_wpv-{wiki_articles_str}_gt-{trend_keywords_str}_c-{coins_str}'
     vec_norm_file = model_file + '_vec_normalize.pkl'
 
     for i in range(training_iterations):
