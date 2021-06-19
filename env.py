@@ -57,7 +57,6 @@ class CryptoTradingEnv(gym.Env):
         
         # (features & balance & net worth & portfolio) * (lookback_len - 1)
         observation_space_len = (len(df.columns) + 2 + 2*(len(coins))) * (lookback_len -1)
-        #print('observation_space_len', observation_space_len)
         self.observation_space = spaces.Box(
             low=-MAX_VALUE,
             high=MAX_VALUE, 

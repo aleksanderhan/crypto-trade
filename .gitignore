@@ -133,3 +133,4 @@ dmypy.json
 params.db
 tensorboard/
 *.pkl
+*.csv
