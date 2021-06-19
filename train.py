@@ -24,19 +24,19 @@ algo = 'PPO'
 coins = list(sorted(['btc', 'eth'])) #list(sorted(['aave', 'algo', 'btc', 'comp', 'eth', 'fil', 'link', 'ltc', 'nmr', 'snx', 'uni', 'xlm', 'xtz', 'yfi']))
 wiki_articles = list(sorted(['Bitcoin', 'Ethereum']))
 trend_keywords = list(sorted(['bitcoin', 'ethereum']))
-start_time = '2021-06-01T00:00'
-end_time = '2021-06-06T00:00'
+start_time = '2020-01-01T00:00'
+end_time = '2021-06-01T00:00'
 policy = 'MlpPolicy'
 lookback_len = 4320 # 3 days
 training_iterations = 100
 epochs = 10
-max_initial_balance = 50000
 training_split = 0.9
 n_envs = 8
 
 
 def create_env(df):
-    env = CryptoTradingEnv(df, coins, max_initial_balance, lookback_len)
+    initial_balance = random.randint(1000, 50000)
+    env = CryptoTradingEnv(df, coins, initial_balance, lookback_len)
     check_env(env, warn=True)
     return env
 

@@ -27,7 +27,7 @@ class CryptoTradingEnv(gym.Env):
     def __init__(self, 
                 df, 
                 coins,
-                max_initial_balance,
+                initial_balance,
                 lookback_len=1440,
                 fee=0.005):
         
@@ -40,10 +40,9 @@ class CryptoTradingEnv(gym.Env):
         self.max_steps = len(df.index) - 1
         self.lookback_len = lookback_len
         self.current_step = lookback_len
-        
-        self.max_initial_balance = max_initial_balance
-        self.initial_balance = random.randint(1000, max_initial_balance)
-        self.max_net_worth = self.initial_balance
+
+        self.initial_balance = initial_balance
+        self.max_net_worth = initial_balance
         
         self.balance = deque(maxlen=lookback_len)
         self.net_worth = deque(maxlen=lookback_len)
@@ -98,7 +97,6 @@ class CryptoTradingEnv(gym.Env):
 
     def reset(self):
         self.current_step = self.lookback_len
-        self.initial_balance = random.randint(1000, self.max_initial_balance)
         self.max_net_worth = self.initial_balance
         self.trades = []
 

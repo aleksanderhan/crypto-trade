@@ -21,8 +21,8 @@ warnings.filterwarnings("ignore")
 
 
 start_time = '2021-06-01T00:00'
-end_time = '2021-06-13T00:00'
-max_initial_balance = 10000
+end_time = '2021-06-12T00:00'
+initial_balance = 10000
 episodes = 1
 
 
@@ -73,7 +73,7 @@ def main(args):
     model_params = load_params(study_name)
 
     env = make_vec_env(
-        lambda: CryptoTradingEnv(df, coins, max_initial_balance, lookback_len), 
+        lambda: CryptoTradingEnv(df, coins, initial_balance, lookback_len), 
         n_envs=1, 
         vec_env_cls=DummyVecEnv
     )
