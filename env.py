@@ -81,6 +81,8 @@ class CryptoTradingEnv(gym.Env):
 
         lost_90_percent_net_worth = self.net_worth[-1] < (self.initial_balance / 10)
         done = lost_90_percent_net_worth or self.current_step > self.max_steps
+        if done:
+            reward += self._get_profit()
 
         info = {
             'current_step': self.current_step, 
@@ -99,18 +101,38 @@ class CryptoTradingEnv(gym.Env):
         self.max_net_worth = self.initial_balance
         self.trades = []
 
-        for coin in self.coins:
+        partitions, balance = self._get_initial_net_worth_distribution()
+
+        for i, coin in enumerate(self.coins):
             self.portfolio[coin] = deque(maxlen=self.lookback_len)
             self.portfolio_value[coin] = deque(maxlen=self.lookback_len)
+
+            coin_price = self._get_coin_avg_price(coin)
+            coin_value = partitions[i]
+            coin_amount = coin_value/coin_price
+
             for i in range(self.lookback_len):
-                self.portfolio[coin].append(0)
-                self.portfolio_value[coin].append(0)
+                self.portfolio[coin].append(coin_amount)
+                self.portfolio_value[coin].append(coin_value)
 
         for i in range(self.lookback_len):
-            self.balance.append(self.initial_balance)
+            self.balance.append(balance)
             self.net_worth.append(self.initial_balance)
 
         return self._next_observation()
+
+
+    def _get_initial_net_worth_distribution(self):
+        partitions = []
+        balance = self.initial_balance
+
+        for _ in range(len(self.coins)):
+            coin_value = random.uniform(0, balance)
+            balance -= coin_value
+            partitions.append(coin_value)
+
+        random.shuffle(partitions)
+        return partitions, balance
 
 
     def _get_reward(self):
@@ -200,11 +222,13 @@ class CryptoTradingEnv(gym.Env):
     def _calculate_net_worth(self):
         portfolio_value = 0
         for coin in self.coins:
-            coin_price = (self.df.at[self.current_step, coin + '_low'] + self.df.at[self.current_step, coin + '_high'])/2
+            coin_price = self._get_coin_avg_price(coin)
             portfolio_value += self.portfolio[coin][-1] * coin_price
             self.portfolio_value[coin].append(portfolio_value)
         return self.balance[-1] + portfolio_value
 
+    def _get_coin_avg_price(self, coin):
+        return (self.df.at[self.current_step, coin + '_low'] + self.df.at[self.current_step, coin + '_high'])/2
 
     def _get_last_trade(self):
         try:
