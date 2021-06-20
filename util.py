@@ -10,6 +10,7 @@ if __name__ == '__main__':
     parser.add_argument('--delete_study')
     parser.add_argument('--plot_optuna')
     parser.add_argument('--list_studies', action='store_true')
+    parser.add_argument('--delete_all_studies', action='store_true')
     args = parser.parse_args()
 
     if args.delete_study:
@@ -27,4 +28,10 @@ if __name__ == '__main__':
         summaries = list_studies()
         for summary in summaries:
             print(summary.study_name)
-        
+    
+    if args.delete_all_studies:
+        choice = input('[y/N]')
+        if choice.lower() == 'y':
+            summaries = list_studies()
+            for summary in summaries:
+                delete_optuna_study(summary.study_name)
