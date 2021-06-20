@@ -21,9 +21,9 @@ warnings.filterwarnings("ignore")
 device = 'cpu'
 model_dir = 'model/'
 algo = 'PPO'
-coins = list(sorted(['btc', 'eth'])) #list(sorted(['aave', 'algo', 'btc', 'comp', 'eth', 'fil', 'link', 'ltc', 'nmr', 'snx', 'uni', 'xlm', 'xtz', 'yfi']))
-wiki_articles = list(sorted(['Bitcoin', 'Ethereum']))
-trend_keywords = list(sorted(['bitcoin', 'ethereum']))
+coins = list(sorted(['algo', 'btc', 'eth', 'link'])) #list(sorted(['aave', 'algo', 'btc', 'comp', 'eth', 'fil', 'link', 'ltc', 'nmr', 'snx', 'uni', 'xlm', 'xtz', 'yfi']))
+wiki_articles = list(sorted(['Binance', 'Bitcoin', 'Blockchain', 'Coinbase', 'Cryptocurrency', 'Ethereum']))
+trend_keywords = list(sorted(['binance', 'bitcoin', 'coinbase', 'ethereum']))
 start_time = '2020-01-01T00:00'
 end_time = '2021-06-01T00:00'
 policy = 'MlpPolicy'

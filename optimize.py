@@ -17,11 +17,11 @@ from lib import get_data, create_layers, activation, get_optuna_storage
 warnings.filterwarnings("ignore")
 
 device = 'cpu'
-coins = list(sorted(['btc', 'eth'])) #list(sorted(['aave', 'algo', 'btc', 'comp', 'eth', 'fil', 'link', 'ltc', 'nmr', 'snx', 'uni', 'xlm', 'xtz', 'yfi']))
+coins = list(sorted(['algo', 'btc', 'eth', 'link'])) #list(sorted(['aave', 'algo', 'btc', 'comp', 'eth', 'fil', 'link', 'ltc', 'nmr', 'snx', 'uni', 'xlm', 'xtz', 'yfi']))
 coins_str = ','.join(coins)
-wiki_articles = list(sorted(['Bitcoin', 'Cryptocurrency', 'Ethereum']))
+wiki_articles = list(sorted(['Binance', 'Bitcoin', 'Blockchain', 'Coinbase', 'Cryptocurrency', 'Ethereum']))
 wiki_articles_str = ','.join(wiki_articles)
-trend_keywords = list(sorted(['bitcoin', 'ethereum']))
+trend_keywords = list(sorted(['binance', 'bitcoin', 'coinbase', 'ethereum']))
 trend_keywords_str = ','.join(trend_keywords)
 start_time = '2021-01-01T00:00'
 end_time = '2021-02-01T00:00'
