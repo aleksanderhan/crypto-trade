@@ -44,7 +44,7 @@ def load_env(df, vec_norm_file, n_envs, vec_env_cls, norm_obs, norm_reward, trai
     env = make_vec_env(
         lambda: create_env(df), 
         n_envs=1,
-        vec_env_cls=DummyVecEnv
+        vec_env_cls=vec_env_cls
     )
     if os.path.isfile(vec_norm_file):
         env = VecNormalize.load(vec_norm_file, env)
@@ -89,10 +89,11 @@ def main():
     vec_norm_file = model_file + '_vec_normalize.pkl'
 
     for i in range(training_iterations):
-        start_frame = random.randint(0,  int(len(train_df.index*0.9)))
-        end_frame = start_frame + int(len(train_df.index*0.1))
+        start_frame = random.randint(0,  len(train_df.index) - lookback_len)
+        end_frame = random.randint(start_frame+lookback_len+1, len(train_df.index))
         epoch_df = train_df[start_frame:end_frame]
         epoch_df.reset_index(drop=True, inplace=True)
+        assert len(epoch_df.index) > lookback_len
 
         # Train model
         train_env = load_env(epoch_df, vec_norm_file, n_envs=n_envs, vec_env_cls=SubprocVecEnv, norm_obs=True, norm_reward=True, training=True)
