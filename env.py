@@ -107,11 +107,10 @@ class CryptoTradingEnv(gym.Env):
             self.portfolio[coin] = deque(maxlen=self.lookback_len)
             self.portfolio_value[coin] = deque(maxlen=self.lookback_len)
 
-            coin_price = self._get_coin_avg_price(coin)
-            coin_value = partitions[i]
-            coin_amount = coin_value/coin_price
-
-            for i in range(self.lookback_len):
+            for j in range(self.lookback_len):
+                coin_price = self._get_coin_avg_price(coin, j)
+                coin_value = partitions[i]
+                coin_amount = coin_value/coin_price
                 self.portfolio[coin].append(coin_amount)
                 self.portfolio_value[coin].append(coin_value)
 
@@ -222,13 +221,13 @@ class CryptoTradingEnv(gym.Env):
     def _calculate_net_worth(self):
         portfolio_value = 0
         for coin in self.coins:
-            coin_price = self._get_coin_avg_price(coin)
+            coin_price = self._get_coin_avg_price(coin, self.current_step)
             portfolio_value += self.portfolio[coin][-1] * coin_price
             self.portfolio_value[coin].append(portfolio_value)
         return self.balance[-1] + portfolio_value
 
-    def _get_coin_avg_price(self, coin):
-        return (self.df.at[self.current_step, coin + '_low'] + self.df.at[self.current_step, coin + '_high'])/2
+    def _get_coin_avg_price(self, coin, step):
+        return (self.df.at[step, coin + '_low'] + self.df.at[step, coin + '_high'])/2
 
     def _get_last_trade(self):
         try:
