@@ -36,7 +36,7 @@ def test_model(model, env, render):
             env.render(mode=render)
         action, _states = model.predict(obs)
         obs, reward, done, info = env.step(action)
-        total_reward += reward
+        total_reward += reward[0]
         if not render:
             print(info[0]['current_step'], '/', env.get_attr('max_steps')[0], end="\r", flush=True)
     print()
