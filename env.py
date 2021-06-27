@@ -50,13 +50,17 @@ class CryptoTradingEnv(gym.Env):
         self.portfolio_value = {}
 
         self.trades = []
+        self.postitions_avg_price = {}
         self.fees_payed = 0
+
+        self.last_reward = 0
+        self.cumulative_reward = 0
 
         # Buy/sell/hold for each coin
         self.action_space = spaces.Box(low=np.array([-1, -1, -1], dtype=np.float32), high=np.array([1, 1, 1], dtype=np.float32), dtype=np.float32)
         
-        # (features & balance & net worth & portfolio) * (lookback_len - 1)
-        observation_space_len = (len(df.columns) + 2 + 2*(len(coins))) * (lookback_len -1)
+        # (features - timestamp & balance & net worth & portfolio) * (lookback_len - 1)
+        observation_space_len = (len(df.columns) - 1 + 2 + 2*(len(coins))) * (lookback_len -1)
         self.observation_space = spaces.Box(
             low=-MAX_VALUE,
             high=MAX_VALUE, 
@@ -68,13 +72,13 @@ class CryptoTradingEnv(gym.Env):
     def step(self, action):
         # Execute one time step within the environment
         t0 = perf_counter()
-        self._take_action(action)
+        reward = self._take_action(action)
 
         self.net_worth.append(self._calculate_net_worth())
         if self.net_worth[-1] > self.max_net_worth:
             self.max_net_worth = self.net_worth[-1]
 
-        reward = self._get_reward()
+        reward += self._get_base_reward()
 
         self.current_step += 1
         obs = self._next_observation()
@@ -83,6 +87,9 @@ class CryptoTradingEnv(gym.Env):
         done = lost_90_percent_net_worth or self.current_step > self.max_steps
         if done:
             reward += self._get_profit()
+
+        self.last_reward = reward
+        self.cumulative_reward += reward
 
         info = {
             'current_step': self.current_step, 
@@ -101,17 +108,20 @@ class CryptoTradingEnv(gym.Env):
         self.max_net_worth = self.initial_balance
         self.trades = []
 
+        self.last_reward = 0
+        self.cumulative_reward = 0
+
         partitions, balance = self._get_initial_net_worth_distribution()
 
         for i, coin in enumerate(self.coins):
             self.portfolio[coin] = deque(maxlen=self.lookback_len)
             self.portfolio_value[coin] = deque(maxlen=self.lookback_len)
+            self.postitions_avg_price[coin] = self._get_coin_avg_price(coin, self.current_step)
 
-            coin_price = self._get_coin_avg_price(coin)
-            coin_value = partitions[i]
-            coin_amount = coin_value/coin_price
-
-            for i in range(self.lookback_len):
+            for j in range(self.lookback_len):
+                coin_price = self._get_coin_avg_price(coin, j)
+                coin_value = partitions[i]
+                coin_amount = coin_value/coin_price
                 self.portfolio[coin].append(coin_amount)
                 self.portfolio_value[coin].append(coin_value)
 
@@ -135,7 +145,7 @@ class CryptoTradingEnv(gym.Env):
         return partitions, balance
 
 
-    def _get_reward(self):
+    def _get_base_reward(self):
         returns = np.diff(self.net_worth)
         return np.nan_to_num(sortino_ratio(returns), posinf=0, neginf=0)
 
@@ -149,7 +159,9 @@ class CryptoTradingEnv(gym.Env):
         coin = self.coins[int(coin_action)]
 
         # Set the current price to a random price within the time step
-        current_price = random.uniform(self.df.loc[self.current_step, coin + '_low'], self.df.loc[self.current_step, coin + '_high'])
+        current_price = random.uniform(self.df.at[self.current_step, coin + '_low'], self.df.at[self.current_step, coin + '_high'])
+
+        reward = 0
 
         if current_price > 0: # Price is 0 before ICO
             if action_type  <= 1 and action_type > 1/3:
@@ -157,10 +169,17 @@ class CryptoTradingEnv(gym.Env):
                 total_possible = self.balance[-1] / current_price
                 coins_bought = max(0, total_possible * amount * (1 - self.fee))
                 cost = total_possible * current_price * amount
-        
+                fee = cost * self.fee
+
+                reward -= fee
+
+                # Take position
+                self.postitions_avg_price[coin] = np.nan_to_num((self.postitions_avg_price[coin] * self.portfolio[coin][-1] + current_price * coins_bought) \
+                                                / (self.portfolio[coin][-1] + coins_bought), posinf=0, neginf=0)
+
                 self.balance.append(self.balance[-1] - cost)
                 self.portfolio[coin].append(self.portfolio[coin][-1] + coins_bought)
-                self.fees_payed += cost * self.fee
+                self.fees_payed += fee
 
                 if coins_bought > 0:
                     self.trades.append({
@@ -172,14 +191,23 @@ class CryptoTradingEnv(gym.Env):
                         'price': current_price
                     })
 
+
             elif action_type >= -1 and action_type < -1/3:
                 # Sell amount % of coin held
                 coins_sold = max(0, self.portfolio[coin][-1] * amount)
                 sell_value = coins_sold * current_price * (1 - self.fee)
+                fee = coins_sold * current_price * self.fee
+
+                reward -= fee
+
+                # Liquidate positions
+                reward += coins_sold * current_price - coins_sold * self.postitions_avg_price[coin]
+                self.postitions_avg_price[coin] = np.nan_to_num((self.postitions_avg_price[coin] * self.portfolio[coin][-1] - current_price * coins_sold) \
+                                                / (self.portfolio[coin][-1] - coins_sold), posinf=0, neginf=0)
 
                 self.balance.append(self.balance[-1] + sell_value)
                 self.portfolio[coin].append(self.portfolio[coin][-1] - coins_sold)
-                self.fees_payed += coins_sold * current_price * self.fee
+                self.fees_payed += fee
 
                 if coins_sold > 0:
                     self.trades.append({
@@ -195,12 +223,15 @@ class CryptoTradingEnv(gym.Env):
                 # Hold
                 pass
 
+        return np.nan_to_num(reward)
+
 
     def _next_observation(self):
         t0 = perf_counter()
         frame = []
 
         for feature in self.df.columns:
+            if feature == 'timestamp': continue
             values = self.df.loc[self.current_step - self.lookback_len: self.current_step - 1, feature].values
             frame.append(np.diff(np.log(values + 1)))
 
@@ -222,13 +253,13 @@ class CryptoTradingEnv(gym.Env):
     def _calculate_net_worth(self):
         portfolio_value = 0
         for coin in self.coins:
-            coin_price = self._get_coin_avg_price(coin)
+            coin_price = self._get_coin_avg_price(coin, self.current_step)
             portfolio_value += self.portfolio[coin][-1] * coin_price
             self.portfolio_value[coin].append(portfolio_value)
         return self.balance[-1] + portfolio_value
 
-    def _get_coin_avg_price(self, coin):
-        return (self.df.at[self.current_step, coin + '_low'] + self.df.at[self.current_step, coin + '_high'])/2
+    def _get_coin_avg_price(self, coin, step):
+        return (self.df.at[step, coin + '_low'] + self.df.at[step, coin + '_high'])/2
 
     def _get_last_trade(self):
         try:
@@ -255,7 +286,9 @@ class CryptoTradingEnv(gym.Env):
             print(f'Net worth: {self.net_worth[-1]} (Max net worth: {self.max_net_worth})')
             print(f'Profit: {profit}')
             print(f'Fees payed: {self.fees_payed}')
-            print()
+            print(f'Base reward: {self._get_base_reward()}')
+            print(f'Last reward: {self.last_reward}')
+            print(f'Cumulative reward: {self.cumulative_reward}')
 
         elif mode == 'human':
             if self.visualization == None:

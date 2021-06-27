@@ -21,7 +21,7 @@ warnings.filterwarnings("ignore")
 device = 'cpu'
 model_dir = 'model/'
 algo = 'PPO'
-coins = list(sorted(['algo', 'btc', 'eth', 'link'])) #list(sorted(['aave', 'algo', 'btc', 'comp', 'eth', 'fil', 'link', 'ltc', 'nmr', 'snx', 'uni', 'xlm', 'xtz', 'yfi']))
+coins = list(sorted(['algo', 'btc', 'eth', 'link']))
 wiki_articles = list(sorted(['Binance', 'Bitcoin', 'Blockchain', 'Coinbase', 'Cryptocurrency', 'Ethereum']))
 trend_keywords = list(sorted(['binance', 'bitcoin', 'coinbase', 'ethereum']))
 start_time = '2020-01-01T00:00'
@@ -55,7 +55,7 @@ def load_env(df, vec_norm_file, n_envs, vec_env_cls, norm_obs, norm_reward, trai
     else:
         return VecNormalize(env, norm_obs=True, norm_reward=False, training=False)
 
-def load_model(env, model_params, model_file):
+def load_model(env, model_params, fname):
     model = PPO(policy, 
                 env,
                 n_epochs=10,
@@ -64,8 +64,8 @@ def load_model(env, model_params, model_file):
                 tensorboard_log='./tensorboard/',
                 **model_params)
 
-    if os.path.isfile(model_file + '.zip'):
-        model.load(model_file)
+    if os.path.isfile(fname + '.zip'):
+        model.load(fname)
 
     return model
 
@@ -74,10 +74,9 @@ def main():
     coins_str = ','.join(coins)
     wiki_articles_str = ','.join(wiki_articles)
     trend_keywords_str = ','.join(trend_keywords)
-    study = f'PPO_p-{policy}_ll-{lookback_len}_wpv-{wiki_articles_str}_gt-{trend_keywords_str}_c-{coins_str}'
+    experiment_name = f'PPO_p-{policy}_ll-{lookback_len}_wpv-{wiki_articles_str}_gt-{trend_keywords_str}_c-{coins_str}'
 
-    model_params = load_params(study)
-    model_params['n_steps'] = 512
+    model_params = load_params(experiment_name)
     df = get_data(start_time, end_time, coins, wiki_articles, trend_keywords)
 
     slice_point = int(len(df.index) * training_split)
@@ -85,8 +84,7 @@ def main():
     test_df = df[slice_point:]
     test_df.reset_index(drop=True, inplace=True)
 
-    model_file = f'PPO_p-{policy}_ll-{lookback_len}_wpv-{wiki_articles_str}_gt-{trend_keywords_str}_c-{coins_str}'
-    vec_norm_file = model_file + '_vec_normalize.pkl'
+    vec_norm_file = experiment_name + '_vec_normalize.pkl'
 
     for i in range(training_iterations):
         start_frame = random.randint(0,  len(train_df.index) - lookback_len)
@@ -97,7 +95,7 @@ def main():
 
         # Train model
         train_env = load_env(epoch_df, vec_norm_file, n_envs=n_envs, vec_env_cls=SubprocVecEnv, norm_obs=True, norm_reward=True, training=True)
-        model = load_model(train_env, model_params, model_file)
+        model = load_model(train_env, model_params, experiment_name)
         
         for e in range(epochs):
             t0 = perf_counter()
@@ -105,12 +103,12 @@ def main():
             t1 = perf_counter()
             print('iteration:', i, 'epoch:', e, 'training time:', t1 - t0)
 
-            model.save(model_file)
+            model.save(experiment_name)
             train_env.save(vec_norm_file)
 
         # Evaluate model
         validation_env = load_env(test_df, vec_norm_file, n_envs=1, vec_env_cls=DummyVecEnv, norm_obs=True, norm_reward=False, training=False)
-        model = load_model(validation_env, model_params, model_file)
+        model = load_model(validation_env, model_params, experiment_name)
 
         run_n_test(model, validation_env, 5, False)
 

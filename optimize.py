@@ -31,7 +31,7 @@ initial_balance = 5000
 lookback_len = 4320
 
 
-permutations = [''.join(p) for p in chain.from_iterable(product('abc', repeat=i) for i in range(1, 5))]
+permutations = [''.join(p) for p in chain.from_iterable(product('abc', repeat=i) for i in range(2, 5))]
 permutations = list(filter(lambda nn_arch: nn_arch == ''.join(reversed(sorted(nn_arch))), permutations))
 
 
