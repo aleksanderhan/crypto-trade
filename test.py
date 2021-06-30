@@ -73,7 +73,7 @@ def main(args):
     model_params = load_params(study_name)
 
     env = make_vec_env(
-        lambda: CryptoTradingEnv(df, coins, initial_balance, lookback_len), 
+        lambda: CryptoTradingEnv(df, coins, initial_balance, lookback_len, fee=0), 
         n_envs=1, 
         vec_env_cls=DummyVecEnv
     )
