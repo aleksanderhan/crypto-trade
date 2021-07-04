@@ -42,7 +42,7 @@ df = get_data(start_time, end_time, coins, wiki_articles, trend_keywords, granul
 
 def optimize(n_trials=5000):
     study = optuna.create_study(
-        study_name=f'PPO_env-{env_version}_p-{policy}_ll-{lookback_len}_wpv-{wiki_articles_str}_gt-{trend_keywords_str}_c-{coins_str}', 
+        study_name=f'PPO_env-{env_version}_p-{policy}_ll-{lookback_len}_gr-{granularity}_wpv-{wiki_articles_str}_gt-{trend_keywords_str}_c-{coins_str}', 
         storage=get_optuna_storage(), 
         load_if_exists=True
     )
