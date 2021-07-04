@@ -16,8 +16,9 @@ from lib import get_data, create_layers, activation, get_optuna_storage
 
 warnings.filterwarnings("ignore")
 
+env_version = CryptoTradingEnv.version
 device = 'cpu'
-coins = list(sorted(['algo', 'btc', 'eth', 'link'])) #list(sorted(['aave', 'algo', 'btc', 'comp', 'eth', 'fil', 'link', 'ltc', 'nmr', 'snx', 'uni', 'xlm', 'xtz', 'yfi']))
+coins = list(sorted(['algo', 'btc', 'eth', 'link']))
 coins_str = ','.join(coins)
 wiki_articles = list(sorted(['Binance', 'Bitcoin', 'Blockchain', 'Coinbase', 'Cryptocurrency', 'Ethereum']))
 wiki_articles_str = ','.join(wiki_articles)
@@ -31,7 +32,7 @@ initial_balance = 5000
 lookback_len = 4320
 
 
-permutations = [''.join(p) for p in chain.from_iterable(product('abc', repeat=i) for i in range(2, 5))]
+permutations = [''.join(p) for p in chain.from_iterable(product('abc', repeat=i) for i in range(2, 4))]
 permutations = list(filter(lambda nn_arch: nn_arch == ''.join(reversed(sorted(nn_arch))), permutations))
 
 
@@ -40,7 +41,7 @@ df = get_data(start_time, end_time, coins, wiki_articles, trend_keywords)
 
 def optimize(n_trials=5000):
     study = optuna.create_study(
-        study_name=f'PPO_p-{policy}_ll-{lookback_len}_wpv-{wiki_articles_str}_gt-{trend_keywords_str}_c-{coins_str}', 
+        study_name=f'PPO_env-{env_version}_p-{policy}_ll-{lookback_len}_wpv-{wiki_articles_str}_gt-{trend_keywords_str}_c-{coins_str}', 
         storage=get_optuna_storage(), 
         load_if_exists=True
     )

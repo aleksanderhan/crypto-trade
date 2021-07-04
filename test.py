@@ -7,7 +7,6 @@ import warnings
 import argparse
 from collections import deque
 
-
 from stable_baselines3 import PPO, A2C
 from stable_baselines3.common.env_util import make_vec_env
 from stable_baselines3.common.vec_env import DummyVecEnv, VecNormalize
@@ -20,6 +19,7 @@ from lib import get_data, load_params
 warnings.filterwarnings("ignore")
 
 
+env_version = CryptoTradingEnv.version
 start_time = '2021-06-01T00:00'
 end_time = '2021-06-12T00:00'
 initial_balance = 10000
@@ -69,7 +69,7 @@ def main(args):
 
     df = get_data(start_time, end_time, coins, wiki_articles, trend_keywords)
 
-    study_name = f'PPO_p-{policy}_ll-{lookback_len}_wpv-{wiki_articles_str}_gt-{trend_keywords_str}_c-{coins_str}'
+    study_name = f'PPO_env-{env_version}_p-{policy}_ll-{lookback_len}_wpv-{wiki_articles_str}_gt-{trend_keywords_str}_c-{coins_str}'
     model_params = load_params(study_name)
 
     env = make_vec_env(

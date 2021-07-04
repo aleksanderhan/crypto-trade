@@ -6,3 +6,4 @@ gym
 Pillow
 mplfinance
 plotly
+ta

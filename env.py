@@ -1,7 +1,8 @@
 import gym
 from gym import spaces
 import pandas as pd
-from numpy import array, log, diff, nan_to_num, concatenate, float32
+import numpy as np
+from numpy import array, log, diff, nan_to_num, concatenate
 import matplotlib.pylab as plt
 import requests
 import json
@@ -10,6 +11,7 @@ import warnings
 from collections import deque
 from time import perf_counter
 from empyrical import sortino_ratio
+from ta import add_all_ta_features
 
 from visualize import TradingGraph
 
@@ -23,6 +25,7 @@ MAX_VALUE = 3.4e38 # ~Max float32
 class CryptoTradingEnv(gym.Env):
     """A crypto trading environment for OpenAI gym"""
     metadata = {'render.modes': ['console', 'human']}
+    version = 1.1
 
     def __init__(self, 
                 df, 
@@ -56,18 +59,27 @@ class CryptoTradingEnv(gym.Env):
         self.last_reward = 0
         self.cumulative_reward = 0
 
+        # Augument dataframe with technical analysis features
+        for coin in coins:
+            self.df = add_all_ta_features(self.df, 
+                open=coin+'_open', 
+                high=coin+'_high', 
+                low=coin+'_low', 
+                close=coin+'_close', 
+                volume=coin+'_volume',
+                colprefix=coin+'_')
+
         # Buy/sell/hold for each coin
-        self.action_space = spaces.Box(low=array([-1, -1, -1], dtype=float32), high=array([1, 1, 1], dtype=float32), dtype=float32)
+        self.action_space = spaces.Box(low=array([-1, -1, -1], dtype=np.float32), high=array([1, 1, 1], dtype=np.float32), dtype=np.float32)
         
         # (features - timestamp & balance & net worth & portfolio) * (lookback_len - 1)
-        observation_space_len = (len(df.columns) - 1 + 2 + 2*(len(coins))) * (lookback_len -1)
+        observation_space_len = (len(self.df.columns) - 1 + 2 + 2*(len(coins))) * (lookback_len -1)
         self.observation_space = spaces.Box(
             low=-MAX_VALUE,
             high=MAX_VALUE, 
             shape=(observation_space_len,),
-            dtype=float32
+            dtype=np.float32
         )
-
 
     def step(self, action):
         # Execute one time step within the environment
@@ -227,22 +239,19 @@ class CryptoTradingEnv(gym.Env):
 
     def _next_observation(self):
         frame = []
-        append = frame.append
-        dfloc, current_step, lookback_len = self.df.loc, self.current_step, self.lookback_len
-        portfolio, portfolio_value = self.portfolio, self.portfolio_value
 
         for feature in self.df.columns:
             if feature == 'timestamp': continue
-            append(diff(log(dfloc[current_step - lookback_len: current_step - 1, feature].values + 1)))
+            frame.append(diff(log(self.df.loc[self.current_step - self.lookback_len: self.current_step - 1, feature].values + 1)))
 
         # Portfolio
         for coin in self.coins:
-            append(diff(log(array(portfolio[coin]) + 1)))
-            append(diff(log(array(portfolio_value[coin]) + 1)))
+            frame.append(diff(log(array(self.portfolio[coin]) + 1)))
+            frame.append(diff(log(array(self.portfolio_value[coin]) + 1)))
 
         # Net worth and balance
-        append(diff(log(array(self.net_worth) + 1)))
-        append(diff(log(array(self.balance) + 1)))
+        frame.append(diff(log(array(self.net_worth) + 1)))
+        frame.append(diff(log(array(self.balance) + 1)))
 
         return nan_to_num(concatenate(frame), posinf=MAX_VALUE, neginf=-MAX_VALUE)
 
