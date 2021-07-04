@@ -21,11 +21,11 @@ activation = {
 }
 
 
-def get_data(start_time, end_time, coins, wiki_articles, trend_keywords):
+def get_data(start_time, end_time, coins, wiki_articles, trend_keywords, granularity):
     coins_str = ','.join(coins)
     wiki_articles_str = ','.join(wiki_articles)
     trend_keywords_str = ','.join(trend_keywords)
-    r = requests.get(f'http://127.0.0.1:5000/data?start_time={start_time}&end_time={end_time}&coins={coins_str}&wiki_articles={wiki_articles_str}&trend_keywords={trend_keywords_str}')
+    r = requests.get(f'http://127.0.0.1:5000/data?start_time={start_time}&end_time={end_time}&coins={coins_str}&wiki_articles={wiki_articles_str}&trend_keywords={trend_keywords_str}&granularity={granularity}')
 
     df = pd.DataFrame.from_dict(r.json())
     print(df)

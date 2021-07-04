@@ -29,14 +29,15 @@ end_time = '2021-02-01T00:00'
 policy = 'MlpPolicy'
 training_split = 0.8
 initial_balance = 5000
-lookback_len = 4320
+granularity = 15
+lookback_len = int(10080/granularity)
 
 
 permutations = [''.join(p) for p in chain.from_iterable(product('abc', repeat=i) for i in range(2, 4))]
 permutations = list(filter(lambda nn_arch: nn_arch == ''.join(reversed(sorted(nn_arch))), permutations))
 
 
-df = get_data(start_time, end_time, coins, wiki_articles, trend_keywords)
+df = get_data(start_time, end_time, coins, wiki_articles, trend_keywords, granularity)
 
 
 def optimize(n_trials=5000):

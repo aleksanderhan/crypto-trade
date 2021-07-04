@@ -24,10 +24,11 @@ algo = 'PPO'
 coins = list(sorted(['algo', 'btc', 'eth', 'link']))
 wiki_articles = list(sorted(['Binance', 'Bitcoin', 'Blockchain', 'Coinbase', 'Cryptocurrency', 'Ethereum']))
 trend_keywords = list(sorted(['binance', 'bitcoin', 'coinbase', 'ethereum']))
-start_time = '2021-05-01T00:00'
+start_time = '2020-01-01T00:00'
 end_time = '2021-06-01T00:00'
 policy = 'MlpPolicy'
-lookback_len = 4320 # 3 days
+granularity = 15 # Minutes
+lookback_len = int(10080/granularity) # 7 days
 training_iterations = 100
 epochs = 10
 training_split = 0.9
@@ -75,10 +76,10 @@ def main():
     coins_str = ','.join(coins)
     wiki_articles_str = ','.join(wiki_articles)
     trend_keywords_str = ','.join(trend_keywords)
-    experiment_name = f'PPO_env-{env_version}_p-{policy}_ll-{lookback_len}_wpv-{wiki_articles_str}_gt-{trend_keywords_str}_c-{coins_str}'
+    experiment_name = f'PPO_env-{env_version}_p-{policy}_ll-{lookback_len}_gr-{granularity}_wpv-{wiki_articles_str}_gt-{trend_keywords_str}_c-{coins_str}'
 
     model_params = load_params(experiment_name)
-    df = get_data(start_time, end_time, coins, wiki_articles, trend_keywords)
+    df = get_data(start_time, end_time, coins, wiki_articles, trend_keywords, granularity)
 
     slice_point = int(len(df.index) * training_split)
     train_df = df[:slice_point]

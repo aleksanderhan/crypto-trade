@@ -60,16 +60,17 @@ def main(args):
     model_file = args.model_file.split('.')[0]
     policy = model_file.split('_')[1].strip('p-')
     lookback_len = int(model_file.split('_')[2].strip('ll-'))
-    wiki_articles_str = model_file.split('_')[3].strip('wpv-')
+    granularity = int(model_file.split('_')[3].strip('gr-'))
+    wiki_articles_str = model_file.split('_')[4].strip('wpv-')
     wiki_articles = wiki_articles_str.split(',')
-    trend_keywords_str = model_file.split('_')[4].strip('gt-')
+    trend_keywords_str = model_file.split('_')[5].strip('gt-')
     trend_keywords = trend_keywords_str.split(',')
     coins_str = model_file.split('_')[-1].strip('c-')
     coins = coins_str.split(',')
 
-    df = get_data(start_time, end_time, coins, wiki_articles, trend_keywords)
+    df = get_data(start_time, end_time, coins, wiki_articles, trend_keywords, granularity)
 
-    study_name = f'PPO_env-{env_version}_p-{policy}_ll-{lookback_len}_wpv-{wiki_articles_str}_gt-{trend_keywords_str}_c-{coins_str}'
+    study_name = f'PPO_env-{env_version}_p-{policy}_ll-{lookback_len}_gr-{granularity}_wpv-{wiki_articles_str}_gt-{trend_keywords_str}_c-{coins_str}'
     model_params = load_params(study_name)
 
     env = make_vec_env(
