@@ -31,7 +31,7 @@ class CryptoTradingEnv(gym.Env):
                 df, 
                 coins,
                 initial_balance,
-                lookback_len=1440,
+                lookback_len,
                 fee=0.0):
         
         super(CryptoTradingEnv, self).__init__()
@@ -52,6 +52,7 @@ class CryptoTradingEnv(gym.Env):
         self.portfolio = {}
         self.portfolio_value = {}
 
+        self.position_held = False
         self.trades = []
         self.postitions_avg_price = {}
         self.fees_payed = 0
@@ -70,7 +71,7 @@ class CryptoTradingEnv(gym.Env):
                 colprefix=coin+'_')
 
         # Buy/sell/hold for each coin
-        self.action_space = spaces.Box(low=array([-1, -1, -1], dtype=np.float32), high=array([1, 1, 1], dtype=np.float32), dtype=np.float32)
+        self.action_space = self.action_space = spaces.MultiDiscrete([3, len(coins)])
         
         # (features - timestamp & balance & net worth & portfolio) * (lookback_len - 1)
         observation_space_len = (len(self.df.columns) - 1 + 2 + 2*(len(coins))) * (lookback_len -1)
@@ -163,12 +164,9 @@ class CryptoTradingEnv(gym.Env):
 
 
     def _take_action(self, action):
-        action = nan_to_num(action, posinf=1, neginf=-1)
         action_type = action[0]
-        amount = 0.5*(action[1] - 1) + 1 # Rescaling:  R_v_i = (N_max − N_min)/(O_max − O_min)∗(O_i − O_max) + N_max
-
-        coin_action = ((len(self.coins) - 1) / 2) * (action[2] - 1) + len(self.coins) - 1
-        coin = self.coins[int(coin_action)]
+        coin = self.coins[int(action[1])]
+        amount = 1
 
         # Set the current price to a random price within the time step
         current_price = random.uniform(self.df.at[self.current_step, coin + '_low'], self.df.at[self.current_step, coin + '_high'])
@@ -176,7 +174,10 @@ class CryptoTradingEnv(gym.Env):
         reward = 0
 
         if current_price > 0: # Price is 0 before ICO
-            if action_type  <= 1 and action_type > 1/3:
+            if action_type  == 0:
+                if self.position_held:
+                   return -1000
+
                 # Buy amount % of balance in coin
                 total_possible = self.balance[-1] / current_price
                 coins_bought = max(0, total_possible * amount * (1 - self.fee))
@@ -203,8 +204,12 @@ class CryptoTradingEnv(gym.Env):
                         'price': current_price
                     })
 
+                self.position_held = True
 
-            elif action_type >= -1 and action_type < -1/3:
+            elif action_type == 1:
+                if not self.position_held or self.portfolio[coin][-1] <= 0:
+                    return -1000
+
                 # Sell amount % of coin held
                 coins_sold = max(0, self.portfolio[coin][-1] * amount)
                 sell_value = coins_sold * current_price * (1 - self.fee)
@@ -231,9 +236,12 @@ class CryptoTradingEnv(gym.Env):
                         'price': current_price
                     })
 
+                self.position_held = False
+
             else:
                 # Hold
-                pass
+                # TODO: hold within the expecation value of the variance
+                reward += 20
 
         return nan_to_num(reward)
 

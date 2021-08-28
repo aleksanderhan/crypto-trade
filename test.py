@@ -18,9 +18,7 @@ from lib import get_data, load_params
 
 warnings.filterwarnings("ignore")
 
-
-env_version = CryptoTradingEnv.version
-start_time = '2021-06-01T00:00'
+start_time = '2021-05-01T00:00'
 end_time = '2021-06-12T00:00'
 initial_balance = 10000
 episodes = 1
@@ -57,16 +55,22 @@ def run_n_test(model, env, n, render=False):
 
 
 def main(args):
-    model_file = args.model_file.split('.')[0]
-    policy = model_file.split('_')[1].strip('p-')
-    lookback_len = int(model_file.split('_')[2].strip('ll-'))
-    granularity = int(model_file.split('_')[3].strip('gr-'))
-    wiki_articles_str = model_file.split('_')[4].strip('wpv-')
+    model_file = args.model_file.rstrip('.zip')
+    env_version = model_file.split('_')[1].strip('env-')
+    policy = model_file.split('_')[2].strip('p-')
+    lookback_len = int(model_file.split('_')[3].strip('ll-'))
+    granularity = int(model_file.split('_')[4].strip('gr-'))
+    wiki_articles_str = model_file.split('_')[5].strip('wpv-')
     wiki_articles = wiki_articles_str.split(',')
-    trend_keywords_str = model_file.split('_')[5].strip('gt-')
+    trend_keywords_str = model_file.split('_')[6].strip('gt-')
     trend_keywords = trend_keywords_str.split(',')
     coins_str = model_file.split('_')[-1].strip('c-')
     coins = coins_str.split(',')
+
+    print('env_version', env_version)
+    print('policy', policy)
+    print('lookback_len', lookback_len)
+    print('granularity', granularity)
 
     df = get_data(start_time, end_time, coins, wiki_articles, trend_keywords, granularity)
 
