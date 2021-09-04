@@ -48,8 +48,10 @@ class CryptoTradingEnv(gym.Env):
         self.max_net_worth = initial_balance
         
         self.balance = deque(maxlen=lookback_len)
-        self.net_worth = deque(maxlen=lookback_len)
+        self.real_net_worth = deque(maxlen=lookback_len)
+        self.hodl_net_worth = deque(maxlen=lookback_len)
         self.portfolio = {}
+        self.start_portfolio = {}
         self.portfolio_value = {}
 
         self.max_postitions = 5
@@ -85,23 +87,28 @@ class CryptoTradingEnv(gym.Env):
         )
 
     def step(self, action):
+        assert self.positions_held[-1] >= 0 and self.positions_held[-1] <= self.max_postitions
+
         # Execute one time step within the environment
         t0 = perf_counter()
-        reward = self._take_action(action)
+        #reward = self._take_action(action)
+        #reward += self._get_base_reward()
+        self._take_action(action)
+        reward = self._get_base_reward()
 
-        self.net_worth.append(self._calculate_net_worth())
-        if self.net_worth[-1] > self.max_net_worth:
-            self.max_net_worth = self.net_worth[-1]
+        self.real_net_worth.append(self._calculate_real_net_worth(self.current_step))
+        self.hodl_net_worth.append(self._calculate_hodl_net_worth(self.current_step))
+        if self.real_net_worth[-1] > self.max_net_worth:
+            self.max_net_worth = self.real_net_worth[-1]
 
-        reward += self._get_base_reward()
 
         self.current_step += 1
         obs = self._next_observation()
 
-        lost_90_percent_net_worth = self.net_worth[-1] < (self.initial_balance / 10)
+        lost_90_percent_net_worth = self.real_net_worth[-1] < (self.initial_balance / 10)
         done = lost_90_percent_net_worth or self.current_step > self.max_steps
         if done:
-            reward += self._get_profit()
+            reward += self.hodl_net_worth[-1] - self.initial_balance 
 
         self.last_reward = reward
         self.cumulative_reward += reward
@@ -144,7 +151,8 @@ class CryptoTradingEnv(gym.Env):
 
         for i in range(self.lookback_len):
             self.balance.append(balance)
-            self.net_worth.append(self.initial_balance)
+            self.real_net_worth.append(self._calculate_real_net_worth(i))
+            self.hodl_net_worth.append(self._calculate_hodl_net_worth(i))
 
         return self._next_observation()
 
@@ -153,20 +161,25 @@ class CryptoTradingEnv(gym.Env):
         partitions = []
         balance = self.initial_balance
 
-        for _ in range(len(self.coins)):
+        for _, coin in enumerate(self.coins):
             coin_value = random.uniform(0, balance)
+            self.start_portfolio[coin] = coin_value/self._get_coin_avg_price(coin, self.current_step)
             if coin_value > 0:
                 self.positions_held_now += 1
                 balance -= coin_value
             partitions.append(coin_value)
 
-        random.shuffle(partitions)
+
+        self.start_portfolio['balance'] = balance
+        
+        random.shuffle(partitions)        
         return partitions, balance
 
 
     def _get_base_reward(self):
-        returns = diff(self.net_worth)
-        return nan_to_num(sortino_ratio(returns), posinf=0, neginf=0)
+        real_ratio = nan_to_num(sortino_ratio(diff(self.real_net_worth)), posinf=0, neginf=0)
+        hodl_ratio = nan_to_num(sortino_ratio(diff(self.hodl_net_worth)), posinf=0, neginf=0)
+        return (real_ratio - hodl_ratio) * 10
 
 
     def _take_action(self, action):
@@ -181,7 +194,7 @@ class CryptoTradingEnv(gym.Env):
 
         if current_price > 0: # Price is 0 before ICO
             if action_type  == 0:
-                if self.positions_held[-1] >= self.max_postitions:
+                if self.positions_held[-1] == self.max_postitions:
                    return -1000
 
                 # Buy amount % of balance in coin
@@ -213,7 +226,7 @@ class CryptoTradingEnv(gym.Env):
                 self.positions_held_now += 1
 
             elif action_type == 1:
-                if self.positions_held[-1] <= 0 or self.portfolio[coin][-1] <= 0:
+                if self.positions_held[-1] == 0 or self.portfolio[coin][-1] <= 0:
                     return -1000
 
                 # Sell amount % of coin held
@@ -266,7 +279,7 @@ class CryptoTradingEnv(gym.Env):
             frame.append(diff(log(array(self.portfolio_value[coin]) + 1)))
 
         # Net worth and balance
-        frame.append(diff(log(array(self.net_worth) + 1)))
+        frame.append(diff(log(array(self.real_net_worth) + 1)))
         frame.append(diff(log(array(self.balance) + 1)))
         frame.append(array([self.initial_balance]*(self.lookback_len - 1)))
         frame.append(array([self.max_postitions]*(self.lookback_len - 1)))
@@ -275,13 +288,21 @@ class CryptoTradingEnv(gym.Env):
         return nan_to_num(concatenate(frame), posinf=MAX_VALUE, neginf=-MAX_VALUE)
 
 
-    def _calculate_net_worth(self):
+    def _calculate_real_net_worth(self, current_step):
         portfolio_value = 0
         for coin in self.coins:
-            coin_price = self._get_coin_avg_price(coin, self.current_step)
+            coin_price = self._get_coin_avg_price(coin, current_step)
             portfolio_value += self.portfolio[coin][-1] * coin_price
             self.portfolio_value[coin].append(portfolio_value)
         return self.balance[-1] + portfolio_value
+
+
+    def _calculate_hodl_net_worth(self, current_step):
+        portfolio_value = 0
+        for coin in self.coins:
+            coin_price = self._get_coin_avg_price(coin, current_step)
+            portfolio_value += self.start_portfolio[coin] * coin_price
+        return self.start_portfolio['balance'] + portfolio_value
 
 
     def _get_coin_avg_price(self, coin, step):
@@ -296,12 +317,13 @@ class CryptoTradingEnv(gym.Env):
 
 
     def _get_profit(self):
-        return self.net_worth[-1] - self.initial_balance
+        return self.real_net_worth[-1] - self.initial_balance
 
 
     def render(self, mode='console', title=None, **kwargs):
         # Render the environment to the screen
-        profit = self._get_profit()        
+        profit = self._get_profit()
+        hodl_profit = self.hodl_net_worth[-1] - self.initial_balance      
         
         if mode == 'console':
             for coin in self.coins:
@@ -310,8 +332,10 @@ class CryptoTradingEnv(gym.Env):
             print(f'Last_trade: {self._get_last_trade()}')
             print(f'Step: {self.current_step} of {self.max_steps}')
             print(f'Balance: {self.balance[-1]} (Initial balance: {self.initial_balance})')
-            print(f'Net worth: {self.net_worth[-1]} (Max net worth: {self.max_net_worth})')
+            print(f'Net worth: {self.real_net_worth[-1]} (Max net worth: {self.max_net_worth})')
             print(f'Profit: {profit}')
+            print('Real profits - hodl:', profit - hodl_profit)
+            print(self.hodl_net_worth[-1])
             print(f'Fees payed: {self.fees_payed}')
             print(f'Base reward: {self._get_base_reward()}')
             print(f'Last reward: {self.last_reward}')
@@ -322,11 +346,11 @@ class CryptoTradingEnv(gym.Env):
                 self.visualization = TradingGraph(self.df, self.coins, title)
             
             if self.current_step > LOOKBACK_WINDOW_SIZE:        
-                self.visualization.render(self.current_step, self.net_worth[-1], self.trades, window_size=LOOKBACK_WINDOW_SIZE)
+                self.visualization.render(self.current_step, self.real_net_worth[-1], self.trades, window_size=LOOKBACK_WINDOW_SIZE)
 
             print(f'Step: {self.current_step} of {self.max_steps}')
             print(f'Balance: {self.balance[-1]} (Initial balance: {self.initial_balance})')
-            print(f'Net worth: {self.net_worth[-1]} (Max net worth: {self.max_net_worth})')
+            print(f'Net worth: {self.real_net_worth[-1]} (Max net worth: {self.max_net_worth})')
             print(f'Profit: {profit}')
             print()
 
