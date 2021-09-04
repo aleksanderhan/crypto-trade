@@ -25,7 +25,7 @@ MAX_VALUE = 3.4e38 # ~Max float32
 class CryptoTradingEnv(gym.Env):
     """A crypto trading environment for OpenAI gym"""
     metadata = {'render.modes': ['console', 'human']}
-    version = 1.1
+    version = 1.2
 
     def __init__(self, 
                 df, 
@@ -52,7 +52,9 @@ class CryptoTradingEnv(gym.Env):
         self.portfolio = {}
         self.portfolio_value = {}
 
-        self.position_held = False
+        self.max_postitions = 5
+        self.positions_held_now = 0
+        self.positions_held = deque(maxlen=lookback_len)
         self.trades = []
         self.postitions_avg_price = {}
         self.fees_payed = 0
@@ -70,11 +72,11 @@ class CryptoTradingEnv(gym.Env):
                 volume=coin+'_volume',
                 colprefix=coin+'_')
 
-        # Buy/sell/hold for each coin
-        self.action_space = self.action_space = spaces.MultiDiscrete([3, len(coins)])
+        # Buy/sell/hold for each coin and amount
+        self.action_space = self.action_space = spaces.MultiDiscrete([3, len(coins), self.max_postitions])
         
-        # (features - timestamp & balance & net worth & portfolio) * (lookback_len - 1)
-        observation_space_len = (len(self.df.columns) - 1 + 2 + 2*(len(coins))) * (lookback_len -1)
+        # (features - timestamp & balance & net worth & portfolio & initial_balance & max_postitions & positions_held) * (lookback_len - 1) 
+        observation_space_len = (len(self.df.columns) - 1 + 2 + 2*(len(coins)) + 3) * (lookback_len -1) 
         self.observation_space = spaces.Box(
             low=-MAX_VALUE,
             high=MAX_VALUE, 
@@ -130,6 +132,7 @@ class CryptoTradingEnv(gym.Env):
             self.portfolio[coin] = deque(maxlen=self.lookback_len)
             self.portfolio_value[coin] = deque(maxlen=self.lookback_len)
             self.postitions_avg_price[coin] = self._get_coin_avg_price(coin, self.current_step)
+            self.positions_held = deque(maxlen=self.lookback_len)
 
             for j in range(self.lookback_len):
                 coin_price = self._get_coin_avg_price(coin, j)
@@ -137,6 +140,7 @@ class CryptoTradingEnv(gym.Env):
                 coin_amount = coin_value/coin_price
                 self.portfolio[coin].append(coin_amount)
                 self.portfolio_value[coin].append(coin_value)
+                self.positions_held.append(self.positions_held_now)
 
         for i in range(self.lookback_len):
             self.balance.append(balance)
@@ -151,7 +155,9 @@ class CryptoTradingEnv(gym.Env):
 
         for _ in range(len(self.coins)):
             coin_value = random.uniform(0, balance)
-            balance -= coin_value
+            if coin_value > 0:
+                self.positions_held_now += 1
+                balance -= coin_value
             partitions.append(coin_value)
 
         random.shuffle(partitions)
@@ -165,8 +171,8 @@ class CryptoTradingEnv(gym.Env):
 
     def _take_action(self, action):
         action_type = action[0]
-        coin = self.coins[int(action[1])]
-        amount = 1
+        coin = self.coins[action[1]]
+        amount = action[2]/self.max_postitions
 
         # Set the current price to a random price within the time step
         current_price = random.uniform(self.df.at[self.current_step, coin + '_low'], self.df.at[self.current_step, coin + '_high'])
@@ -175,7 +181,7 @@ class CryptoTradingEnv(gym.Env):
 
         if current_price > 0: # Price is 0 before ICO
             if action_type  == 0:
-                if self.position_held:
+                if self.positions_held[-1] >= self.max_postitions:
                    return -1000
 
                 # Buy amount % of balance in coin
@@ -204,10 +210,10 @@ class CryptoTradingEnv(gym.Env):
                         'price': current_price
                     })
 
-                self.position_held = True
+                self.positions_held_now += 1
 
             elif action_type == 1:
-                if not self.position_held or self.portfolio[coin][-1] <= 0:
+                if self.positions_held[-1] <= 0 or self.portfolio[coin][-1] <= 0:
                     return -1000
 
                 # Sell amount % of coin held
@@ -236,12 +242,14 @@ class CryptoTradingEnv(gym.Env):
                         'price': current_price
                     })
 
-                self.position_held = False
+                self.positions_held_now -= 1
 
             else:
                 # Hold
                 # TODO: hold within the expecation value of the variance
                 reward += 20
+
+        self.positions_held.append(self.positions_held_now)
 
         return nan_to_num(reward)
 
@@ -260,6 +268,9 @@ class CryptoTradingEnv(gym.Env):
         # Net worth and balance
         frame.append(diff(log(array(self.net_worth) + 1)))
         frame.append(diff(log(array(self.balance) + 1)))
+        frame.append(array([self.initial_balance]*(self.lookback_len - 1)))
+        frame.append(array([self.max_postitions]*(self.lookback_len - 1)))
+        frame.append(diff(array(self.positions_held)))
 
         return nan_to_num(concatenate(frame), posinf=MAX_VALUE, neginf=-MAX_VALUE)
 
