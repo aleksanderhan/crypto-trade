@@ -105,7 +105,7 @@ def main():
             t1 = perf_counter()
             print('iteration:', i, 'epoch:', e, 'training time:', t1 - t0)
 
-            model.save(experiment_name)
+            model.save(experiment_name + '.zip')
             train_env.save(vec_norm_file)
 
         # Evaluate model

@@ -25,7 +25,7 @@ MAX_VALUE = 3.4e38 # ~Max float32
 class CryptoTradingEnv(gym.Env):
     """A crypto trading environment for OpenAI gym"""
     metadata = {'render.modes': ['console', 'human']}
-    version = 1.2
+    version = 1.3
 
     def __init__(self, 
                 df, 
@@ -58,7 +58,6 @@ class CryptoTradingEnv(gym.Env):
         self.positions_held_now = 0
         self.positions_held = deque(maxlen=lookback_len)
         self.trades = []
-        self.postitions_avg_price = {}
         self.fees_payed = 0
 
         self.last_reward = 0
@@ -91,10 +90,8 @@ class CryptoTradingEnv(gym.Env):
 
         # Execute one time step within the environment
         t0 = perf_counter()
-        #reward = self._take_action(action)
-        #reward += self._get_base_reward()
-        self._take_action(action)
-        reward = self._get_base_reward()
+        reward = self._take_action(action)
+        reward += self._get_base_reward()
 
         self.real_net_worth.append(self._calculate_real_net_worth(self.current_step))
         self.hodl_net_worth.append(self._calculate_hodl_net_worth(self.current_step))
@@ -132,13 +129,13 @@ class CryptoTradingEnv(gym.Env):
 
         self.last_reward = 0
         self.cumulative_reward = 0
+        self.positions_held_now = 0
 
         partitions, balance = self._get_initial_net_worth_distribution()
 
         for i, coin in enumerate(self.coins):
             self.portfolio[coin] = deque(maxlen=self.lookback_len)
             self.portfolio_value[coin] = deque(maxlen=self.lookback_len)
-            self.postitions_avg_price[coin] = self._get_coin_avg_price(coin, self.current_step)
             self.positions_held = deque(maxlen=self.lookback_len)
 
             for j in range(self.lookback_len):
@@ -205,10 +202,6 @@ class CryptoTradingEnv(gym.Env):
 
                 reward -= fee
 
-                # Take position
-                self.postitions_avg_price[coin] = nan_to_num((self.postitions_avg_price[coin] * self.portfolio[coin][-1] + current_price * coins_bought) \
-                                                / (self.portfolio[coin][-1] + coins_bought), posinf=0, neginf=0)
-
                 self.balance.append(self.balance[-1] - cost)
                 self.portfolio[coin].append(self.portfolio[coin][-1] + coins_bought)
                 self.fees_payed += fee
@@ -236,11 +229,6 @@ class CryptoTradingEnv(gym.Env):
 
                 reward -= fee
 
-                # Liquidate positions
-                reward += coins_sold * current_price - coins_sold * self.postitions_avg_price[coin]
-                self.postitions_avg_price[coin] = nan_to_num((self.postitions_avg_price[coin] * self.portfolio[coin][-1] - current_price * coins_sold) \
-                                                / (self.portfolio[coin][-1] - coins_sold), posinf=0, neginf=0)
-
                 self.balance.append(self.balance[-1] + sell_value)
                 self.portfolio[coin].append(self.portfolio[coin][-1] - coins_sold)
                 self.fees_payed += fee
@@ -260,7 +248,7 @@ class CryptoTradingEnv(gym.Env):
             else:
                 # Hold
                 # TODO: hold within the expecation value of the variance
-                reward += 20
+                reward += 10
 
         self.positions_held.append(self.positions_held_now)
 
@@ -334,8 +322,7 @@ class CryptoTradingEnv(gym.Env):
             print(f'Balance: {self.balance[-1]} (Initial balance: {self.initial_balance})')
             print(f'Net worth: {self.real_net_worth[-1]} (Max net worth: {self.max_net_worth})')
             print(f'Profit: {profit}')
-            print('Real profits - hodl:', profit - hodl_profit)
-            print(self.hodl_net_worth[-1])
+            print('Current policy hodl profit diff:', profit - hodl_profit)
             print(f'Fees payed: {self.fees_payed}')
             print(f'Base reward: {self._get_base_reward()}')
             print(f'Last reward: {self.last_reward}')
