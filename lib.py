@@ -20,12 +20,11 @@ activation = {
     'leaky_relu': nn.LeakyReLU
 }
 
+inverse_hu_map = {v: k for k, v in hidden_units.items()}
+
 
 def get_data(start_time, end_time, coins, wiki_articles, trend_keywords, granularity):
-    coins_str = ','.join(coins)
-    wiki_articles_str = ','.join(wiki_articles)
-    trend_keywords_str = ','.join(trend_keywords)
-    r = requests.get(f'http://127.0.0.1:5000/data?start_time={start_time}&end_time={end_time}&coins={coins_str}&wiki_articles={wiki_articles_str}&trend_keywords={trend_keywords_str}&granularity={granularity}')
+    r = requests.get(f'http://127.0.0.1:5000/data?start_time={start_time}&end_time={end_time}&coins={coins}&wiki_articles={wiki_articles}&trend_keywords={trend_keywords}&granularity={granularity}')
 
     df = pd.DataFrame.from_dict(r.json())
     print(df)
@@ -34,8 +33,10 @@ def get_data(start_time, end_time, coins, wiki_articles, trend_keywords, granula
 
 
 def create_layers(permutation):
-    return [hidden_units[i] for i in permutation]
+    return [hidden_units[p] for p in permutation]
 
+def create_permunation(layers):
+    return ''.join([inverse_hu_map[l] for l in layers])
 
 def load_params(study_name):
     try:
@@ -109,12 +110,12 @@ def list_studies():
     return optuna.get_all_study_summaries(storage=get_optuna_storage())
 
 
-def uniquename(wish):
+def uniquefolder(wish):
     parts = os.path.splitext(wish)
-    i = 0
+    i = 1
     while True:
-        name = parts[0] + (str(i) if i > 0 else '') + parts[1]
-        if os.path.isfile(name):
+        name = parts[0] + (str(i) if i > 0 else '0') + parts[1] + '/'
+        if os.path.isdir(name):
             i += 1
         else:
-            yield name
+            yield name, i

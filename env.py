@@ -25,7 +25,7 @@ MAX_VALUE = 3.4e38 # ~Max float32
 class CryptoTradingEnv(gym.Env):
     """A crypto trading environment for OpenAI gym"""
     metadata = {'render.modes': ['console', 'human']}
-    version = 1.3
+    version = '1.3'
 
     def __init__(self, 
                 df, 
@@ -60,6 +60,7 @@ class CryptoTradingEnv(gym.Env):
         self.trades = []
         self.fees_payed = 0
 
+        self.idiot_moves = 0
         self.last_reward = 0
         self.cumulative_reward = 0
 
@@ -105,7 +106,7 @@ class CryptoTradingEnv(gym.Env):
         lost_90_percent_net_worth = self.real_net_worth[-1] < (self.initial_balance / 10)
         done = lost_90_percent_net_worth or self.current_step > self.max_steps
         if done:
-            reward += self.hodl_net_worth[-1] - self.initial_balance 
+            reward += self.real_net_worth[-1] - self.hodl_net_worth[-1]
 
         self.last_reward = reward
         self.cumulative_reward += reward
@@ -192,7 +193,8 @@ class CryptoTradingEnv(gym.Env):
         if current_price > 0: # Price is 0 before ICO
             if action_type  == 0:
                 if self.positions_held[-1] == self.max_postitions:
-                   return -1000
+                    self.idiot_moves += 1
+                    return -1000
 
                 # Buy amount % of balance in coin
                 total_possible = self.balance[-1] / current_price
@@ -220,6 +222,7 @@ class CryptoTradingEnv(gym.Env):
 
             elif action_type == 1:
                 if self.positions_held[-1] == 0 or self.portfolio[coin][-1] <= 0:
+                    self.idiot_moves += 1
                     return -1000
 
                 # Sell amount % of coin held
@@ -271,7 +274,7 @@ class CryptoTradingEnv(gym.Env):
         frame.append(diff(log(array(self.balance) + 1)))
         frame.append(array([self.initial_balance]*(self.lookback_len - 1)))
         frame.append(array([self.max_postitions]*(self.lookback_len - 1)))
-        frame.append(diff(array(self.positions_held)))
+        frame.append(array(self.positions_held)[1:])
 
         return nan_to_num(concatenate(frame), posinf=MAX_VALUE, neginf=-MAX_VALUE)
 
@@ -322,11 +325,13 @@ class CryptoTradingEnv(gym.Env):
             print(f'Balance: {self.balance[-1]} (Initial balance: {self.initial_balance})')
             print(f'Net worth: {self.real_net_worth[-1]} (Max net worth: {self.max_net_worth})')
             print(f'Profit: {profit}')
-            print('Current policy hodl profit diff:', profit - hodl_profit)
+            print('Current policy vs. hodl policy profit diff:', profit - hodl_profit)
             print(f'Fees payed: {self.fees_payed}')
             print(f'Base reward: {self._get_base_reward()}')
             print(f'Last reward: {self.last_reward}')
             print(f'Cumulative reward: {self.cumulative_reward}')
+            print(f'Idiot moves: {self.idiot_moves}')
+            print('--------------------------------------------------------------------------------')
 
         elif mode == 'human':
             if self.visualization == None:
