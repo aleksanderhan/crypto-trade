@@ -5,6 +5,7 @@ import numpy as np
 import optuna
 import warnings
 import argparse
+import configparser
 from collections import deque
 
 from stable_baselines3 import PPO, A2C
@@ -55,36 +56,35 @@ def run_n_test(model, env, n, render=False):
 
 
 def main(args):
-    model_file = args.model_file.rstrip('.zip')
-    env_version = model_file.split('_')[1].strip('env-')
-    policy = model_file.split('_')[2].strip('p-')
-    lookback_len = int(model_file.split('_')[3].strip('ll-'))
-    granularity = int(model_file.split('_')[4].strip('gr-'))
-    wiki_articles_str = model_file.split('_')[5].strip('wpv-')
-    wiki_articles = wiki_articles_str.split(',')
-    trend_keywords_str = model_file.split('_')[6].strip('gt-')
-    trend_keywords = trend_keywords_str.split(',')
-    coins_str = model_file.split('_')[-1].strip('c-')
+    parts =  os.path.normpath(args.model_folder).split(os.path.sep)
+    study_name = f'{parts[-1]}'
+
+    config = configparser.ConfigParser()
+    config.read(args.model_folder + 'config.ini')
+    experiment_params = config['experiment_params']
+
+    lookback_len = int(experiment_params['lookback_len'])
+    policy = experiment_params['policy']
+    granularity = int(experiment_params['granularity'])
+    wiki_articles_str = experiment_params['wiki_articles_str']
+    trend_keywords_str = experiment_params['trend_keywords_str']
+    coins_str = experiment_params['coins_str']
     coins = coins_str.split(',')
 
-    print('env_version', env_version)
-    print('policy', policy)
-    print('lookback_len', lookback_len)
-    print('granularity', granularity)
+    df = get_data(start_time, end_time, coins_str, wiki_articles_str, trend_keywords_str, granularity)
 
-    df = get_data(start_time, end_time, coins, wiki_articles, trend_keywords, granularity)
-
-    study_name = f'PPO_env-{env_version}_p-{policy}_ll-{lookback_len}_gr-{granularity}_wpv-{wiki_articles_str}_gt-{trend_keywords_str}_c-{coins_str}'
     model_params = load_params(study_name)
 
+    env = CryptoTradingEnv(df, coins, initial_balance, lookback_len, fee=0)
+    assert env.version == experiment_params['env_version']
     env = make_vec_env(
-        lambda: CryptoTradingEnv(df, coins, initial_balance, lookback_len, fee=0), 
+        lambda: env, 
         n_envs=1, 
         vec_env_cls=DummyVecEnv
     )
     env = VecNormalize(env, norm_obs=True, norm_reward=False, training=False)
 
-    vec_norm_file = model_file + '_vec_normalize.pkl'
+    vec_norm_file = args.model_folder + 'vec_normalize.pkl'
     if os.path.isfile(vec_norm_file):
         env = VecNormalize.load(vec_norm_file, env)
         env.norm_obs = True
@@ -99,8 +99,8 @@ def main(args):
                 tensorboard_log='./tensorboard/',
                 **model_params)
 
-    if os.path.isfile(model_file + '.zip'):
-        model.load(model_file)
+    if os.path.isfile(args.model_folder + 'model.zip'):
+        model.load(args.model_folder + 'model')
 
     #mean_reward, std_reward = evaluate_policy(model, env, deterministic=False, render=bool(args.r), n_eval_episodes=episodes)
     #print('mean_reward:', mean_reward, 'std_reward', std_reward)
@@ -110,8 +110,8 @@ def main(args):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument("-r")
-    parser.add_argument('model_file')
+    parser.add_argument('-r')
+    parser.add_argument('model_folder')
     args = parser.parse_args()
     print(args)
 

@@ -32,7 +32,7 @@ class CryptoTradingEnv(gym.Env):
                 coins,
                 initial_balance,
                 lookback_len,
-                fee=0.0):
+                fee=0.001):
         
         super(CryptoTradingEnv, self).__init__()
 
@@ -75,7 +75,7 @@ class CryptoTradingEnv(gym.Env):
                 colprefix=coin+'_')
 
         # Buy/sell/hold for each coin and amount
-        self.action_space = self.action_space = spaces.MultiDiscrete([3, len(coins), self.max_postitions])
+        self.action_space = spaces.MultiDiscrete([3, len(coins), self.max_postitions])
         
         # (features - timestamp & balance & net worth & portfolio & initial_balance & max_postitions & positions_held) * (lookback_len - 1) 
         observation_space_len = (len(self.df.columns) - 1 + 2 + 2*(len(coins)) + 3) * (lookback_len -1) 
@@ -194,7 +194,7 @@ class CryptoTradingEnv(gym.Env):
             if action_type  == 0:
                 if self.positions_held[-1] == self.max_postitions:
                     self.idiot_moves += 1
-                    return -1000
+                    return -5
 
                 # Buy amount % of balance in coin
                 total_possible = self.balance[-1] / current_price
@@ -223,7 +223,7 @@ class CryptoTradingEnv(gym.Env):
             elif action_type == 1:
                 if self.positions_held[-1] == 0 or self.portfolio[coin][-1] <= 0:
                     self.idiot_moves += 1
-                    return -1000
+                    return -5
 
                 # Sell amount % of coin held
                 coins_sold = max(0, self.portfolio[coin][-1] * amount)
@@ -314,9 +314,14 @@ class CryptoTradingEnv(gym.Env):
     def render(self, mode='console', title=None, **kwargs):
         # Render the environment to the screen
         profit = self._get_profit()
-        hodl_profit = self.hodl_net_worth[-1] - self.initial_balance      
+        hodl_profit = self.hodl_net_worth[-1] - self.initial_balance
+
+        real_ratio = nan_to_num(sortino_ratio(diff(self.real_net_worth)), posinf=0, neginf=0)
+        hodl_ratio = nan_to_num(sortino_ratio(diff(self.hodl_net_worth)), posinf=0, neginf=0)  
         
         if mode == 'console':
+            print(f'Start portfolio:', self.start_portfolio)
+            
             for coin in self.coins:
                 print(coin, self.portfolio[coin][-1])
 
@@ -324,8 +329,11 @@ class CryptoTradingEnv(gym.Env):
             print(f'Step: {self.current_step} of {self.max_steps}')
             print(f'Balance: {self.balance[-1]} (Initial balance: {self.initial_balance})')
             print(f'Net worth: {self.real_net_worth[-1]} (Max net worth: {self.max_net_worth})')
+            print(f'Hodl net worth: {self.hodl_net_worth[-1]}')
             print(f'Profit: {profit}')
             print('Current policy vs. hodl policy profit diff:', profit - hodl_profit)
+            print(f'Real sortino ratio:', real_ratio)
+            print(f'Hodl sortino ratio:', hodl_ratio)
             print(f'Fees payed: {self.fees_payed}')
             print(f'Base reward: {self._get_base_reward()}')
             print(f'Last reward: {self.last_reward}')

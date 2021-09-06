@@ -23,7 +23,7 @@ device = 'cpu'
 save_folder, experiment_number = next(uniquefolder('models/experiment'))
 
 start_time = '2020-01-01T00:00' # Min: '2020-01-01T00:00'
-end_time = '2020-05-01T00:00' # Max: '2021-05-01T00:00'
+end_time = '2021-05-01T00:00' # Max: '2021-05-01T00:00'
 coins = list(sorted(['algo', 'btc', 'eth', 'link']))
 wiki_articles = list(sorted(['Binance', 'Bitcoin', 'Blockchain', 'Coinbase', 'Cryptocurrency', 'Ethereum']))
 trend_keywords = list(sorted(['binance', 'bitcoin', 'coinbase', 'ethereum']))
@@ -117,7 +117,7 @@ def main(model_params):
         validation_env = load_env(test_df, vec_norm_file, n_envs=1, vec_env_cls=DummyVecEnv, norm_obs=True, norm_reward=False, training=False)
         model = load_model(validation_env, model_params, policy)
 
-        run_n_test(model, validation_env, 5, False)
+        run_n_test(model, validation_env, 3, False)
 
 
 if __name__ == '__main__':
@@ -128,9 +128,7 @@ if __name__ == '__main__':
     parser.add_argument('--load')
     args = parser.parse_args()
 
-    study_name = f'experiment{experiment_number}' # TODO: hash of config file
-    model_params = load_params(study_name)
-    config['model_params'] = model_params
+    
     if args.cuda:
         device = 'cuda'
 
@@ -167,5 +165,8 @@ if __name__ == '__main__':
         os.makedirs(save_folder, exist_ok=True)
         with open(save_folder + 'config.ini', 'w') as configfile:
             config.write(configfile)
+
+    study_name = f'experiment{experiment_number}' # TODO: hash of config file
+    model_params = load_params(study_name)
 
     main(model_params)
