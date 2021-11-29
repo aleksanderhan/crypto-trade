@@ -10,7 +10,7 @@ import random
 import warnings
 from collections import deque
 from time import perf_counter
-from empyrical import sortino_ratio
+from empyrical import information_ratio
 from ta import add_all_ta_features
 
 from visualize import TradingGraph
@@ -106,7 +106,7 @@ class CryptoTradingEnv(gym.Env):
         lost_90_percent_net_worth = self.real_net_worth[-1] < (self.initial_balance / 10)
         done = lost_90_percent_net_worth or self.current_step > self.max_steps
         if done:
-            reward += self.real_net_worth[-1] - self.hodl_net_worth[-1]
+            reward += (self.real_net_worth[-1] - self.hodl_net_worth[-1])*10
 
         self.last_reward = reward
         self.cumulative_reward += reward
@@ -175,9 +175,10 @@ class CryptoTradingEnv(gym.Env):
 
 
     def _get_base_reward(self):
-        real_ratio = nan_to_num(sortino_ratio(diff(self.real_net_worth)), posinf=0, neginf=0)
-        hodl_ratio = nan_to_num(sortino_ratio(diff(self.hodl_net_worth)), posinf=0, neginf=0)
-        return (real_ratio - hodl_ratio) * 10
+        returns = diff(self.real_net_worth)
+        benchmark_returns = diff([self._get_coin_avg_price('btc', i) for i in range(self.current_step - self.lookback_len, self.current_step)])
+        information_ratio = nan_to_num(information_ratio(returns, benchmark_returns), posinf=0, neginf=0)
+        return information_ratio * 10
 
 
     def _take_action(self, action):
@@ -194,7 +195,7 @@ class CryptoTradingEnv(gym.Env):
             if action_type  == 0:
                 if self.positions_held[-1] == self.max_postitions:
                     self.idiot_moves += 1
-                    return -5
+                    return -10
 
                 # Buy amount % of balance in coin
                 total_possible = self.balance[-1] / current_price
@@ -223,7 +224,7 @@ class CryptoTradingEnv(gym.Env):
             elif action_type == 1:
                 if self.positions_held[-1] == 0 or self.portfolio[coin][-1] <= 0:
                     self.idiot_moves += 1
-                    return -5
+                    return -10
 
                 # Sell amount % of coin held
                 coins_sold = max(0, self.portfolio[coin][-1] * amount)
@@ -251,7 +252,7 @@ class CryptoTradingEnv(gym.Env):
             else:
                 # Hold
                 # TODO: hold within the expecation value of the variance
-                reward += 10
+                reward += 20
 
         self.positions_held.append(self.positions_held_now)
 
@@ -331,10 +332,10 @@ class CryptoTradingEnv(gym.Env):
             print(f'Net worth: {self.real_net_worth[-1]} (Max net worth: {self.max_net_worth})')
             print(f'Hodl net worth: {self.hodl_net_worth[-1]}')
             print(f'Profit: {profit}')
+            print(f'Fees payed: {self.fees_payed}')
             print('Current policy vs. hodl policy profit diff:', profit - hodl_profit)
             print(f'Real sortino ratio:', real_ratio)
             print(f'Hodl sortino ratio:', hodl_ratio)
-            print(f'Fees payed: {self.fees_payed}')
             print(f'Base reward: {self._get_base_reward()}')
             print(f'Last reward: {self.last_reward}')
             print(f'Cumulative reward: {self.cumulative_reward}')

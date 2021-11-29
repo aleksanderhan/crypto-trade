@@ -19,8 +19,8 @@ from lib import get_data, load_params
 
 warnings.filterwarnings("ignore")
 
-start_time = '2021-05-01T00:00'
-end_time = '2021-06-12T00:00'
+start_time = '2020-01-01T00:00' #'2021-05-01T00:00'
+end_time = '2020-02-01T00:00' #'2021-06-12T00:00'
 initial_balance = 10000
 episodes = 1
 
@@ -75,7 +75,7 @@ def main(args):
 
     model_params = load_params(study_name)
 
-    env = CryptoTradingEnv(df, coins, initial_balance, lookback_len, fee=0)
+    env = CryptoTradingEnv(df, coins, initial_balance, lookback_len, fee=0.001)
     assert env.version == experiment_params['env_version']
     env = make_vec_env(
         lambda: env, 
